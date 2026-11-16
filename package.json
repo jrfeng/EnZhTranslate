@@ -1,7 +1,7 @@
 {
   "name": "en-zh-translate-tauri",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "英译中桌面版（Tauri）",
   "scripts": {
     "build": "node scripts/build.mjs",
