@@ -182,6 +182,64 @@ async fn models(request: ModelsRequest) -> Value {
     json!({ "ok": true, "models": list })
 }
 
+#[derive(Deserialize)]
+struct BalanceRequest {
+    #[serde(default, rename = "apiKey")]
+    api_key: String,
+    #[serde(default, rename = "baseURL")]
+    base_url: String,
+}
+
+#[tauri::command]
+async fn balance(request: BalanceRequest) -> Value {
+    let api_key = request.api_key.trim();
+    if api_key.is_empty() {
+        return error_json("NO_KEY", "请先填写 API Key。");
+    }
+    let url = format!("{}/user/balance", resolve_base_url(&request.base_url));
+
+    let client = match reqwest::Client::builder()
+        .timeout(Duration::from_secs(15))
+        .build()
+    {
+        Ok(client) => client,
+        Err(error) => return error_json("INTERNAL", error.to_string()),
+    };
+
+    let response = match client.get(&url).bearer_auth(api_key).send().await {
+        Ok(response) => response,
+        Err(error) => return error_json("NETWORK", format!("查询余额失败：{error}")),
+    };
+
+    let status = response.status();
+    let data: Value = response.json().await.unwrap_or(Value::Null);
+
+    if !status.is_success() {
+        return error_json(status_code(status.as_u16()), upstream_message(&data));
+    }
+
+    let info = data
+        .get("balance_infos")
+        .and_then(|value| value.as_array())
+        .and_then(|items| items.first());
+
+    let field = |name: &str| -> String {
+        info.and_then(|value| value.get(name))
+            .and_then(|value| value.as_str())
+            .unwrap_or("")
+            .to_string()
+    };
+
+    json!({
+        "ok": true,
+        "available": data.get("is_available").and_then(|value| value.as_bool()).unwrap_or(true),
+        "currency": field("currency"),
+        "total": field("total_balance"),
+        "granted": field("granted_balance"),
+        "toppedUp": field("topped_up_balance"),
+    })
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // GUI 版没有控制台，把 panic 文本落盘，方便事后排查
@@ -201,7 +259,7 @@ pub fn run() {
                 let _ = window.set_focus();
             }
         }))
-        .invoke_handler(tauri::generate_handler![translate, models])
+        .invoke_handler(tauri::generate_handler![translate, models, balance])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

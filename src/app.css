@@ -287,6 +287,24 @@ body {
   color: var(--ok);
 }
 
+.balance {
+  border-color: transparent;
+  background: var(--panel-2);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.balance:hover:not(:disabled) {
+  background: var(--panel-2);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.balance.low {
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 45%, transparent);
+}
+
 .btn-warn {
   border-color: var(--warn);
   color: var(--warn);

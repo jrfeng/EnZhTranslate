@@ -80,6 +80,7 @@ const el = {}
 for (const id of [
   'settings-toggle',
   'settings',
+  'balance',
   'api-key',
   'base-url',
   'save-settings',
@@ -785,6 +786,7 @@ async function run() {
     state.phase = 'done'
     state.copyState = 'idle'
     render()
+    void refreshBalance()
 
     if (state.autoCopy && state.output.length > 0) await copyText(state.output)
   } catch (error) {
@@ -818,6 +820,37 @@ function addTerm() {
   persistTerms()
   renderTerms()
   renderChrome()
+}
+
+/* ------------------------------------------------------------ 余额显示 */
+
+/**
+ * 查询并显示账户余额。DeepSeek 官方接口是 GET /user/balance；
+ * 其它 OpenAI 兼容服务通常没有这个接口，失败时就隐藏，不打扰用户。
+ */
+async function refreshBalance() {
+  if (config.apiKey.length === 0) {
+    el.balance.hidden = true
+    return
+  }
+
+  const payload = await invokeTauri('balance', { apiKey: config.apiKey, baseURL: config.baseURL })
+  if (payload === null || payload === undefined || payload.ok !== true) {
+    el.balance.hidden = true
+    return
+  }
+  if (typeof payload.total !== 'string' || payload.total.length === 0) {
+    el.balance.hidden = true
+    return
+  }
+
+  const symbol =
+    payload.currency === 'USD' ? '$' : payload.currency === 'CNY' ? '¥' : String(payload.currency || '') + ' '
+  el.balance.textContent = '余额 ' + symbol + payload.total
+  el.balance.title =
+    '充值 ' + (payload.toppedUp || '0') + ' · 赠送 ' + (payload.granted || '0') + '（点击刷新）'
+  el.balance.classList.toggle('low', payload.available === false)
+  el.balance.hidden = false
 }
 
 /* ------------------------------------------------------------ 设置与模型 */
@@ -1004,7 +1037,10 @@ function bind() {
     config.baseURL = base.length > 0 ? base : DEFAULT_BASE_URL
     saveSettings()
     void refreshModels()
+    void refreshBalance()
   })
+
+  el['balance'].addEventListener('click', () => void refreshBalance())
 
   el['model-select'].addEventListener('change', () => {
     state.selectedModel = el['model-select'].value
@@ -1023,4 +1059,7 @@ el.source.value = state.input
 bind()
 renderAll()
 syncHighlight()
-if (config.apiKey.length > 0) void refreshModels()
+if (config.apiKey.length > 0) {
+  void refreshModels()
+  void refreshBalance()
+}

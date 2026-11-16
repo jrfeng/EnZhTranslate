@@ -1,6 +1,6 @@
 # 英译中 · Tauri 桌面版
 
-版本 0.2.3。原生桌面版：前端静态页打进程序里，Rust 侧两个命令直接调模型接口，**运行时不需要 Node，也不需要开浏览器**。
+版本 0.3.0。原生桌面版：前端静态页打进程序里，Rust 侧三个命令直接调模型接口，**运行时不需要 Node，也不需要开浏览器**。
 
 ## 功能
 
@@ -10,6 +10,7 @@
 - 同样的文本（且术语、模型都没变）不会重复发请求
 - 「自动复制」：翻译成功后自动复制 Markdown 译文
 - 右上角模型下拉（来自 `/models`）、设置抽屉（API Key + 接口地址）
+- **余额显示**：调 `GET /user/balance`（DeepSeek 官方接口），顶部显示「余额 ¥xx.xx」，点击可刷新；接口不支持时自动隐藏
 - 翻译时输出框上方有进度条动画；改原文/术语/模型后旧译文标「需重新翻译」
 - **单实例**：再次双击快捷方式只会把已有窗口唤到前面，不会再开新窗口
 
@@ -33,7 +34,7 @@ WebView2 error: WindowsError(HRESULT(0x8000FFFF) "灾难性故障")
 | 产物 | 大小 | 适合 |
 |---|---|---|
 | `%LOCALAPPDATA%\Programs\EnZhTranslate\EnZhTranslate.exe` | 6.7 MB | 直接发 exe，对方双击即用（需要机器上已有 WebView2） |
-| `EnZhTranslate_0.2.3_x64-setup.exe` | 1.79 MB | 发安装包，自动检测/安装 WebView2，带开始菜单与卸载项 |
+| `EnZhTranslate_0.3.0_x64-setup.exe` | 1.80 MB | 发安装包，自动检测/安装 WebView2，带开始菜单与卸载项 |
 
 安装包由 `npx tauri build` 生成，位于 `src-tauri/target/release/bundle/nsis/`。
 
