@@ -1,0 +1,14 @@
+{
+  "name": "en-zh-translate-tauri",
+  "private": true,
+  "version": "0.2.3",
+  "description": "英译中桌面版（Tauri）",
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}

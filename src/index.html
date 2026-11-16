@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>英译中</title>
+    <link rel="stylesheet" href="/app.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="head">
+        <h1 class="title">英译中</h1>
+        <span class="sub">在左侧输入英文，点「翻译」查看中文译文。</span>
+        <div class="head-actions">
+          <button type="button" class="btn" id="settings-toggle" aria-expanded="false" aria-controls="settings">
+            设置
+          </button>
+          <label class="model-label" for="model-select">模型</label>
+          <select class="select" id="model-select"></select>
+        </div>
+      </header>
+
+      <section class="settings" id="settings" hidden>
+        <div class="field">
+          <label for="api-key">API Key</label>
+          <input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-..." />
+        </div>
+        <div class="field">
+          <label for="base-url">接口地址</label>
+          <input id="base-url" type="text" autocomplete="off" spellcheck="false" placeholder="https://api.deepseek.com" />
+        </div>
+        <button type="button" class="btn btn-primary" id="save-settings">保存并读取模型</button>
+        <span class="hint" id="settings-hint">API Key 只存在本机浏览器里，随请求发给本机服务后转发给模型接口。</span>
+      </section>
+
+      <main class="grid">
+        <section class="col">
+          <div class="colhead">
+            <span class="label">英文原文</span>
+            <div class="meta">
+              <label class="check" id="immediate-label" title="勾选后，粘贴英文即自动翻译">
+                <input type="checkbox" id="immediate" />
+                粘贴后翻译
+              </label>
+              <span class="count" id="char-count">0 字符</span>
+              <button type="button" class="btn" id="clear">清除</button>
+              <button type="button" class="btn btn-primary" id="translate">翻译</button>
+            </div>
+          </div>
+
+          <div class="input-wrap">
+            <pre class="hl" id="hl" aria-hidden="true"></pre>
+            <textarea
+              class="input"
+              id="source"
+              spellcheck="false"
+              placeholder="在这里输入或粘贴英文…"
+            ></textarea>
+          </div>
+
+          <div class="terms" id="terms">
+            <div class="terms-head">
+              <span class="label">术语</span>
+              <span class="count" id="term-count">0</span>
+              <button type="button" class="btn btn-warn" id="term-clear" disabled>清空</button>
+              <button type="button" class="btn" id="terms-toggle">收起</button>
+            </div>
+            <div class="terms-body" id="terms-body">
+              <div class="terms-add">
+                <input class="input-text" id="term-source" maxlength="120" placeholder="术语" />
+                <span class="term-join">翻译成</span>
+                <input class="input-text" id="term-target" maxlength="120" placeholder="译法" />
+                <button type="button" class="btn" id="term-add" disabled>添加</button>
+              </div>
+              <div class="terms-list" id="terms-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="col">
+          <div class="colhead">
+            <span class="label">中文译文</span>
+            <div class="meta">
+              <label class="check" id="auto-copy-label" title="翻译完成后自动复制译文">
+                <input type="checkbox" id="auto-copy" />
+                自动复制
+              </label>
+              <span class="stale" id="stale" hidden>需重新翻译</span>
+              <button type="button" class="btn" id="view-toggle" disabled>Markdown</button>
+              <button type="button" class="btn" id="copy" disabled>复制</button>
+            </div>
+            <div class="progress" id="progress" hidden><span class="progress-bar"></span></div>
+          </div>
+          <div class="output" id="output"></div>
+        </section>
+      </main>
+    </div>
+
+    <div class="modal" id="confirm-modal" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+        <div class="modal-title" id="confirm-title">清空术语</div>
+        <div class="modal-text">确定要清空全部已添加的术语吗？清空后无法恢复。</div>
+        <div class="modal-actions">
+          <button type="button" class="btn" id="confirm-cancel">取消</button>
+          <button type="button" class="btn btn-warn" id="confirm-ok">清空</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

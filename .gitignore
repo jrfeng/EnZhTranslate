@@ -1,0 +1,9 @@
+node_modules/
+src-tauri/target/
+src-tauri/gen/
+*.log
+
+# 构建产物与安装包不入库（在 Releases 或本地分发）
+EnZhTranslate_*.exe
+*.msi
+*.zip
