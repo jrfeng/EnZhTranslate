@@ -21,8 +21,9 @@ await build({
   logLevel: 'info',
 })
 
-await copyFile(join(src, 'index.html'), join(out, 'index.html'))
-await copyFile(join(src, 'app.css'), join(out, 'app.css'))
+for (const file of ['index.html', 'app.css']) {
+  await copyFile(join(src, file), join(out, file))
+}
 
 // Web Awesome 的主题 CSS 带相对 @import，整目录拷过去保持结构
 await cp(join(root, 'node_modules/@awesome.me/webawesome/dist/styles'), join(out, 'styles'), {

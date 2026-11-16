@@ -7,6 +7,34 @@
 
 /* ------------------------------------------------------------ 常量与状态 */
 
+/** 把致命错误直接显示在页面上，避免出现「一片白」却无从排查 */
+function showFatalError(message) {
+  try {
+    let bar = document.getElementById('fatal-error')
+    if (bar === null) {
+      bar = document.createElement('pre')
+      bar.id = 'fatal-error'
+      bar.style.cssText =
+        'position:fixed;left:0;right:0;bottom:0;z-index:9999;max-height:45%;overflow:auto;' +
+        'margin:0;padding:12px 16px;background:#b3261e;color:#fff;' +
+        'font:12px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap'
+      document.body.appendChild(bar)
+    }
+    bar.textContent += '启动出错：' + message + '\n'
+  } catch (error) {
+    // 连错误条都画不出来就算了
+  }
+}
+
+window.addEventListener('error', (event) => {
+  showFatalError(event.message || String(event.error || '未知错误'))
+})
+
+window.addEventListener('unhandledrejection', (event) => {
+  const reason = event.reason
+  showFatalError(reason && reason.message ? String(reason.message) : String(reason))
+})
+
 const MAX_TERMS = 50
 const COPIED_MS = 1600
 
@@ -83,6 +111,14 @@ const state = {
   settingsOpen: false,
   /** 当前主题 id：auto / a / b / c */
   theme: 'auto',
+  /** 图片识别状态 */
+  ocrBusy: false,
+  ocrMessage: '',
+  ocrError: false,
+  /** 这张图是否已经跑过一次 OCR（跑过才显示「刷新」按钮） */
+  ocrDone: false,
+  /** 当前预览的图片：{ url, name, width, height } */
+  image: null,
   /** 是否正在显示「清空术语」确认框。 */
   confirmClear: false,
   /** 每发起一次翻译自增，用于丢弃过期响应。 */
@@ -98,6 +134,35 @@ for (const id of [
   'settings',
   'balance',
   'theme-select',
+  'pick-image',
+  'image-input',
+  'ocr-status',
+  'ocr-progress',
+  'image-preview',
+  'image-thumb',
+  'image-name',
+  'image-size',
+  'image-zoom',
+  'image-refresh',
+  'toast-stack',
+  'verify-overlay',
+  'verify-image',
+  'verify-stage',
+  'zoom-in',
+  'zoom-out',
+  'zoom-reset',
+  'zoom-value',
+  'verify-editor',
+  'verify-confirm',
+  'verify-save',
+  'verify-close',
+  'verify-view',
+  'verify-preview',
+  'confirm-keep',
+  'confirm-discard',
+  'win-min',
+  'win-max',
+  'win-close',
   'api-key',
   'base-url',
   'save-settings',
@@ -108,7 +173,6 @@ for (const id of [
   'translate',
   'hl',
   'source',
-  'terms',
   'term-count',
   'term-clear',
   'confirm-modal',
@@ -535,13 +599,29 @@ function isStale() {
 
 function renderChrome() {
   const loading = state.phase === 'loading'
+  const ocrBusy = state.ocrBusy
 
-  el.translate.disabled = state.input.trim().length === 0 || loading
+  el.translate.disabled = state.input.trim().length === 0 || loading || ocrBusy
   el.translate.textContent = loading ? '翻译中…' : '翻译'
-  el.clear.disabled = state.input.length === 0
+  el.clear.disabled = (state.input.length === 0 && state.image === null) || ocrBusy
+  el['pick-image'].disabled = ocrBusy || loading
+  el['image-refresh'].hidden = !state.ocrDone
+  el['image-refresh'].disabled = ocrBusy || loading
+  el['image-refresh'].classList.toggle('is-spinning', ocrBusy)
+  el['ocr-status'].hidden = state.ocrMessage.length === 0
+  el['ocr-status'].textContent = state.ocrMessage
+  el['ocr-status'].classList.toggle('error', state.ocrError)
+
+  el['image-preview'].hidden = state.image === null
+  if (state.image !== null) {
+    el['image-name'].textContent = state.image.name
+    el['image-size'].textContent =
+      state.image.width > 0 ? state.image.width + ' × ' + state.image.height : ''
+  }
 
   el['char-count'].textContent = state.input.length + ' 字符'
   el.progress.hidden = !loading
+  el['ocr-progress'].hidden = !ocrBusy
   el.stale.hidden = !isStale()
 
   el.copy.disabled = state.output.length === 0
@@ -814,14 +894,7 @@ async function run() {
     })
     if (runId !== state.runId) return
     if (payload === null || payload === undefined || payload.ok !== true) {
-      const detail =
-        payload !== null &&
-        payload !== undefined &&
-        payload.error !== undefined &&
-        typeof payload.error.message === 'string'
-          ? payload.error.message
-          : '翻译失败'
-      throw new Error(detail)
+      throw new Error(localizeError(payload?.error, '翻译失败，请稍后重试。'))
     }
 
     state.output = typeof payload.translation === 'string' ? payload.translation : ''
@@ -837,7 +910,9 @@ async function run() {
   } catch (error) {
     if (runId !== state.runId) return
     state.phase = 'error'
-    state.message = error !== null && error !== undefined && error.message ? String(error.message) : String(error)
+    const raw = error !== null && error !== undefined && error.message ? String(error.message) : String(error)
+    state.message = hasChinese(raw) ? raw : '翻译失败，请稍后重试。'
+    console.error(error)
     render()
   }
 }
@@ -925,17 +1000,11 @@ async function refreshModels() {
       el['settings-hint'].textContent =
         payload.models.length > 0 ? '已读取 ' + payload.models.length + ' 个模型。' : '接口没有返回模型列表，将使用默认模型。'
     } else {
-      const detail =
-        payload !== null &&
-        payload !== undefined &&
-        payload.error !== undefined &&
-        typeof payload.error.message === 'string'
-          ? payload.error.message
-          : '读取失败'
-      el['settings-hint'].textContent = '模型列表读取失败：' + detail
+      el['settings-hint'].textContent =
+        '模型列表读取失败：' + localizeError(payload?.error, '请检查 API Key 和接口地址。')
     }
   } catch (error) {
-    el['settings-hint'].textContent = '模型列表读取失败：' + String(error && error.message ? error.message : error)
+    el['settings-hint'].textContent = '模型列表读取失败：请检查网络后重试。'
   }
   renderModels()
 }
@@ -967,8 +1036,20 @@ function bind() {
     el.hl.scrollLeft = el.source.scrollLeft
   })
 
-  // 勾选「粘贴后翻译」后，粘贴完成即触发一次翻译
-  el.source.addEventListener('paste', () => {
+  // 勾选「粘贴后翻译」后，粘贴完成即触发一次翻译；粘贴图片时走 OCR
+  el.source.addEventListener('paste', (event) => {
+    const items = event.clipboardData?.items ?? []
+    for (const item of items) {
+      if (item.kind === 'file' && String(item.type || '').startsWith('image/')) {
+        const file = item.getAsFile()
+        if (file !== null) {
+          event.preventDefault()
+          void handleImageFile(file, 'paste')
+          return
+        }
+      }
+    }
+
     if (!state.immediate) return
     window.setTimeout(() => {
       state.input = el.source.value
@@ -976,6 +1057,106 @@ function bind() {
       renderChrome()
       if (state.input.trim().length > 0) void run()
     }, 0)
+  })
+
+  el['pick-image'].addEventListener('click', () => el['image-input'].click())
+
+  el['image-input'].addEventListener('change', () => {
+    const file = el['image-input'].files?.[0] ?? null
+    el['image-input'].value = ''
+    if (file !== null) void handleImageFile(file, 'file')
+  })
+
+  el['image-thumb'].addEventListener('click', () => void openVerify())
+  el['image-refresh'].addEventListener('click', refreshOcr)
+  el['image-zoom'].addEventListener('click', () => void openVerify())
+
+  el['verify-overlay'].addEventListener('click', (event) => {
+    if (event.target === el['verify-overlay']) closeVerify()
+  })
+  el['verify-save'].addEventListener('click', saveVerify)
+  el['verify-close'].addEventListener('click', () => closeVerify())
+  el['verify-view'].addEventListener('click', () => {
+    verifyView = verifyView === 'preview' ? 'edit' : 'preview'
+    renderVerifyView()
+    if (verifyView === 'edit') el['verify-editor'].focus()
+  })
+  el['confirm-keep'].addEventListener('click', () => {
+    el['verify-confirm'].hidden = true
+  })
+  el['confirm-discard'].addEventListener('click', () => {
+    el['verify-confirm'].hidden = true
+    closeVerify(true)
+  })
+
+  /* 图片区域：滚轮缩放 + 拖拽平移（缩放控件与关闭按钮上的操作不参与） */
+  const stage = el['verify-stage']
+  const isStageControl = (target) =>
+    target instanceof Element && target.closest('.verify-zoom, .verify-close-x') !== null
+
+  stage.addEventListener(
+    'wheel',
+    (event) => {
+      if (isStageControl(event.target)) return
+      event.preventDefault()
+      const rect = stage.getBoundingClientRect()
+      const originX = event.clientX - rect.left - rect.width / 2
+      const originY = event.clientY - rect.top - rect.height / 2
+      const factor = event.deltaY < 0 ? 1.12 : 1 / 1.12
+      setVerifyZoom(verifyZoom * factor, originX, originY)
+    },
+    { passive: false },
+  )
+
+  let dragging = false
+  let dragStartX = 0
+  let dragStartY = 0
+  let panStartX = 0
+  let panStartY = 0
+
+  stage.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0) return
+    // 点控件时不要抢指针，否则 setPointerCapture 会让按钮收不到 click
+    if (isStageControl(event.target)) return
+    dragging = true
+    dragStartX = event.clientX
+    dragStartY = event.clientY
+    panStartX = verifyPanX
+    panStartY = verifyPanY
+    stage.classList.add('is-dragging')
+    stage.setPointerCapture?.(event.pointerId)
+  })
+
+  stage.addEventListener('pointermove', (event) => {
+    if (!dragging) return
+    verifyPanX = panStartX + (event.clientX - dragStartX)
+    verifyPanY = panStartY + (event.clientY - dragStartY)
+    applyVerifyTransform()
+  })
+
+  const endDrag = (event) => {
+    if (!dragging) return
+    dragging = false
+    stage.classList.remove('is-dragging')
+    stage.releasePointerCapture?.(event.pointerId)
+  }
+
+  stage.addEventListener('pointerup', endDrag)
+  stage.addEventListener('pointercancel', endDrag)
+  stage.addEventListener('dblclick', (event) => {
+    if (isStageControl(event.target)) return
+    resetVerifyZoom()
+  })
+
+  el['zoom-in'].addEventListener('click', () => setVerifyZoom(verifyZoom * 1.25))
+  el['zoom-out'].addEventListener('click', () => setVerifyZoom(verifyZoom / 1.25))
+  el['zoom-reset'].addEventListener('click', resetVerifyZoom)
+
+  el['image-thumb'].addEventListener('load', () => {
+    if (state.image === null) return
+    state.image.width = el['image-thumb'].naturalWidth
+    state.image.height = el['image-thumb'].naturalHeight
+    el['image-size'].textContent = state.image.width + ' × ' + state.image.height
   })
 
   el.source.addEventListener('keydown', (event) => {
@@ -995,7 +1176,10 @@ function bind() {
     state.translatedText = ''
     state.translatedTerms = ''
     state.translatedModel = ''
+    state.ocrMessage = ''
+    state.ocrError = false
     el.source.value = ''
+    clearImage()
     syncHighlight()
     render()
     el.source.focus()
@@ -1089,12 +1273,384 @@ function bind() {
     writeStore(KEYS.theme, state.theme)
   })
 
+  bindWindowControls()
+
   el['model-select'].addEventListener('change', () => {
     state.selectedModel = el['model-select'].value
     config.model = state.selectedModel
     saveSettings()
     renderChrome()
   })
+}
+
+/* ------------------------------------------------------------ 图片识别 */
+
+/** 单张图片上限，超过直接拒绝（OCR 接口本身允许 100 MiB，但上传很慢） */
+const OCR_MAX_BYTES = 20 * 1024 * 1024
+
+function setOcrStatus(message, isError = false) {
+  state.ocrMessage = message
+  state.ocrError = isError
+  renderChrome()
+}
+
+/** 识别期间每秒更新一次已用时间，避免长时间没有反馈 */
+let ocrTicker = 0
+
+function startOcrTicker() {
+  const startedAt = Date.now()
+  stopOcrTicker()
+  ocrTicker = window.setInterval(() => {
+    if (!state.ocrBusy) {
+      stopOcrTicker()
+      return
+    }
+    const seconds = Math.floor((Date.now() - startedAt) / 1000)
+    state.ocrMessage = '正在识别图片… ' + seconds + 's'
+    el['ocr-status'].textContent = state.ocrMessage
+  }, 1000)
+}
+
+function stopOcrTicker() {
+  if (ocrTicker !== 0) {
+    window.clearInterval(ocrTicker)
+    ocrTicker = 0
+  }
+}
+
+/** 文件读成 base64（去掉 data: 前缀） */
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = String(reader.result ?? '')
+      const comma = result.indexOf(',')
+      resolve(comma >= 0 ? result.slice(comma + 1) : result)
+    }
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(file)
+  })
+}
+
+/** OCR 输出里会带 <｜ref｜>、<｜box｜>[[x1,y1,x2,y2]]<｜/box｜> 这类定位标记，去掉 */
+function cleanupOcrText(raw) {
+  return String(raw ?? '')
+    .replace(/<｜box｜>\[\[[^\]]*\]\]<｜\/box｜>/g, '')
+    .replace(/<｜ref｜>/g, '')
+    .replace(/<｜\/ref｜>/g, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+/** 把图片显示到预览条（OCR 完成后仍然保留，方便对照）。用 data URL，跨页面也能带过去 */
+function showImage(dataUrl, name, source) {
+  state.image = { dataUrl, name: name || 'clipboard.png', source, width: 0, height: 0 }
+  state.ocrDone = false
+  el['image-thumb'].src = dataUrl
+  renderChrome()
+}
+
+function clearImage() {
+  state.image = null
+  state.ocrDone = false
+  el['image-thumb'].removeAttribute('src')
+  renderChrome()
+}
+
+/** 校验弹窗里图片的缩放/平移状态 */
+let verifyZoom = 1
+let verifyPanX = 0
+let verifyPanY = 0
+
+function applyVerifyTransform() {
+  el['verify-image'].style.transform =
+    'translate(' + verifyPanX + 'px, ' + verifyPanY + 'px) scale(' + verifyZoom + ')'
+  el['zoom-value'].textContent = Math.round(verifyZoom * 100) + '%'
+}
+
+/** 以 (originX, originY) 为中心缩放，坐标是相对舞台中心的偏移 */
+function setVerifyZoom(next, originX = 0, originY = 0) {
+  const clamped = Math.min(8, Math.max(0.2, next))
+  const ratio = clamped / verifyZoom
+  verifyPanX = originX - (originX - verifyPanX) * ratio
+  verifyPanY = originY - (originY - verifyPanY) * ratio
+  verifyZoom = clamped
+  applyVerifyTransform()
+}
+
+function resetVerifyZoom() {
+  verifyZoom = 1
+  verifyPanX = 0
+  verifyPanY = 0
+  applyVerifyTransform()
+}
+
+/** 校验弹窗的编辑 / 预览模式 */
+let verifyView = 'edit'
+
+function renderVerifyView() {
+  const previewing = verifyView === 'preview'
+  el['verify-editor'].hidden = previewing
+  el['verify-preview'].hidden = !previewing
+  el['verify-view'].textContent = previewing ? '编辑' : '预览'
+  if (previewing) {
+    el['verify-preview'].innerHTML = '<div class="md">' + renderMarkdown(el['verify-editor'].value) + '</div>'
+  }
+}
+
+/** 打开校验弹窗：整页大小的浮层，上面看图片、下面改文字 */
+function openVerify() {
+  if (state.image === null) return
+  el['verify-image'].src = state.image.dataUrl
+  el['verify-editor'].value = state.input
+  el['verify-confirm'].hidden = true
+  el['verify-overlay'].hidden = false
+  verifyView = 'preview'
+  renderVerifyView()
+  resetVerifyZoom()
+}
+
+/** 弹窗里的文字有没有改过 */
+function verifyDirty() {
+  return !el['verify-overlay'].hidden && el['verify-editor'].value !== state.input
+}
+
+function closeVerify(force = false) {
+  if (el['verify-overlay'].hidden) return
+  if (!force && verifyDirty()) {
+    el['verify-confirm'].hidden = false
+    return
+  }
+  el['verify-overlay'].hidden = true
+  el['verify-confirm'].hidden = true
+  el['verify-image'].removeAttribute('src')
+}
+
+/** 保存弹窗里的文字到输入框，然后关闭 */
+function saveVerify() {
+  const text = el['verify-editor'].value
+  if (text !== state.input) {
+    state.input = text
+    el.source.value = text
+    syncHighlight()
+    render()
+  }
+  closeVerify(true)
+}
+
+/** 错误信息里出现这些英文原文时，统一翻成中文给用户看 */
+function hasChinese(text) {
+  return /[\u4e00-\u9fa5]/.test(String(text || ''))
+}
+
+/** 把 { code, message } 形式的错误翻成中文；不认识的一律用兜底中文 */
+function localizeError(error, fallback) {
+  const code = String(error?.code ?? '')
+  const raw = String(error?.message ?? '').trim()
+
+  if (code === 'NO_KEY') return '请先在「设置」里填写 API Key。'
+  if (code === 'UNAUTHORIZED') return 'API Key 无效，请在「设置」里检查。'
+  if (code === 'QUOTA') return '余额不足，请充值后再试。'
+  if (code === 'RATE_LIMIT') return '请求过于频繁，请稍后再试。'
+  if (code === 'NETWORK') return '网络异常，请检查网络或接口地址。'
+  if (code === 'UPSTREAM') return '模型服务暂时不可用，请稍后重试。'
+  if (code === 'INTERNAL') return '程序内部错误，请重试一次。'
+  if (code === 'EMPTY_INPUT') return '请先输入要翻译的英文。'
+  if (code === 'TOO_LONG') return '文本太长，请分段翻译。'
+  if (code === 'BAD_IMAGE') return '图片数据无法解析，请重新选一张。'
+
+  // 上游偶尔会给中文，这时候直接用
+  if (hasChinese(raw)) return raw
+  return fallback
+}
+
+/** Toast 提示：右上角浮块，几秒后自动消失 */
+const TOAST_MS = 6000
+const TOAST_MAX = 3
+
+function showToast(message, kind = 'error') {
+  const stack = el['toast-stack']
+  if (stack === null || stack === undefined) return
+
+  while (stack.children.length >= TOAST_MAX) stack.firstElementChild.remove()
+
+  const toast = document.createElement('div')
+  toast.className = 'toast toast-' + kind
+
+  const text = document.createElement('span')
+  text.className = 'toast-text'
+  text.textContent = message
+
+  const close = document.createElement('button')
+  close.type = 'button'
+  close.className = 'toast-close'
+  close.textContent = '\u00d7'
+  close.setAttribute('aria-label', '关闭提示')
+  close.addEventListener('click', () => toast.remove())
+
+  toast.append(text, close)
+  stack.appendChild(toast)
+  window.setTimeout(() => toast.remove(), TOAST_MS)
+}
+
+/** 把 OCR 错误翻成中文（对照官方文档的错误表） */
+function ocrErrorMessage(error) {
+  const code = String(error?.code ?? '')
+  const raw = String(error?.message ?? '').trim()
+
+  // 先按文档里的英文原文匹配
+  if (/password-protected/i.test(raw)) return '文件有打开密码，请移除密码后重试。'
+  if (/more than 1000 pages/i.test(raw)) return '文档超过 1000 页。'
+  if (/too large/i.test(raw)) return '文件超过 100 MB。'
+  if (/did not finish/i.test(raw)) return '识别超时，试试更小的文件。'
+  if (/could not be parsed|could not be decoded|format is not supported/i.test(raw)) {
+    return '文件无法解析或格式不支持。'
+  }
+  if (/temporarily unavailable|Internal Server Error/i.test(raw)) {
+    return 'OCR 服务暂时不可用，请稍后重试。'
+  }
+
+  // 再按状态码
+  if (code === 'BAD_IMAGE') return '图片数据无法解析，请重新选一张。'
+  if (code === 'BAD_REQUEST') return '请求参数不合法，或文件无法处理。'
+  if (code === 'UPLOAD_SLOW') return '上传过慢，请换网络或换更小的文件重试。'
+  if (code === 'TOO_LARGE') return '文件超过 100 MB。'
+  if (code === 'TIMEOUT') return '上传与识别超过 180 秒上限，换小一点的文件吧。'
+  if (code === 'BUSY') return 'OCR 服务繁忙，请稍后重试。'
+  if (code === 'UPLOAD_FAILED') return '文件上传或提交识别失败，请重试。'
+
+  return localizeError(error, 'OCR 识别失败，请稍后重试。')
+}
+
+/** OCR 出错：行内状态 + Toast 一起提示 */
+function ocrFail(message) {
+  setOcrStatus(message, true)
+  showToast(message)
+}
+
+/** 从 data URL 里取 mime 类型 */
+function dataUrlMime(dataUrl) {
+  const match = /^data:([^;,]+)/.exec(String(dataUrl || ''))
+  return match ? match[1] : 'image/png'
+}
+
+/** 对给定图片跑一次 OCR，把结果写进输入框 */
+async function runOcr(dataUrl, name, mime) {
+  if (config.apiKey.length === 0) {
+    ocrFail('请先在「设置」里填写 API Key。')
+    return
+  }
+
+  const text = String(dataUrl || '')
+  const comma = text.indexOf(',')
+  const data = comma >= 0 ? text.slice(comma + 1) : text
+  if (data.length === 0) {
+    ocrFail('图片数据为空，请重新选一张图片。')
+    return
+  }
+
+  state.ocrBusy = true
+  setOcrStatus('正在识别图片…')
+  startOcrTicker()
+
+  const payload = await invokeTauri('ocr', {
+    apiKey: config.apiKey,
+    baseURL: config.baseURL,
+    fileName: name || 'clipboard.png',
+    mime: mime || 'image/png',
+    data,
+  })
+
+  state.ocrBusy = false
+  stopOcrTicker()
+  // 请求有结果了（成功或失败都算），此时才显示「刷新」
+  state.ocrDone = true
+
+  if (payload === null || payload === undefined || payload.ok !== true) {
+    ocrFail(ocrErrorMessage(payload?.error))
+    return
+  }
+
+  const recognized = cleanupOcrText(payload.text)
+  if (recognized.length === 0) {
+    setOcrStatus('没有识别到文字', true)
+    showToast('没有识别到文字，换一张更清晰的图片试试。')
+    return
+  }
+
+  el.source.value = recognized
+  state.input = recognized
+  syncHighlight()
+  setOcrStatus('')
+  render()
+
+  if (state.immediate) void run()
+}
+
+/** 用当前图片重新识别一次 */
+function refreshOcr() {
+  if (state.image === null) return
+  void runOcr(state.image.dataUrl, state.image.name, dataUrlMime(state.image.dataUrl))
+}
+
+async function handleImageFile(file, source = 'file') {
+  if (file === null || file === undefined) return
+
+  if (!String(file.type || '').startsWith('image/')) {
+    ocrFail('这不是图片文件，请选 PNG / JPEG / WebP 等图片。')
+    return
+  }
+  if (file.size > OCR_MAX_BYTES) {
+    ocrFail('图片超过 20 MB，换一张小一点的。')
+    return
+  }
+  if (config.apiKey.length === 0) {
+    ocrFail('请先在「设置」里填写 API Key。')
+    return
+  }
+
+  let data = ''
+  try {
+    data = await fileToBase64(file)
+  } catch (error) {
+    ocrFail('读取图片失败，请重试。')
+    return
+  }
+
+  const dataUrl = 'data:' + (file.type || 'image/png') + ';base64,' + data
+  showImage(dataUrl, file.name, source)
+  await runOcr(dataUrl, file.name, file.type || 'image/png')
+}
+
+/* ------------------------------------------------------------ 窗口控制 */
+
+/** 自定义标题栏的窗口按钮（关掉原生外框后自己实现） */
+function bindWindowControls() {
+  const appWindow = window.__TAURI__?.window?.getCurrentWindow?.() ?? null
+
+  if (appWindow === null) {
+    // 拿不到 Tauri 窗口对象时至少保证能关掉窗口
+    el['win-close'].addEventListener('click', () => window.close())
+    return
+  }
+
+  el['win-min'].addEventListener('click', () => void appWindow.minimize())
+  el['win-max'].addEventListener('click', () => void appWindow.toggleMaximize())
+  el['win-close'].addEventListener('click', () => void appWindow.close())
+
+  const syncMaxState = async () => {
+    try {
+      const maximized = await appWindow.isMaximized()
+      el['win-max'].classList.toggle('is-maximized', maximized)
+      el['win-max'].title = maximized ? '还原' : '最大化'
+    } catch (error) {
+      // 拿不到状态就用默认图标
+    }
+  }
+
+  void syncMaxState()
+  void appWindow.onResized(() => void syncMaxState())
 }
 
 /* ---------------------------------------------------------------- 主题 */
@@ -1140,6 +1696,7 @@ applyTheme(state.theme)
 renderThemeSelect()
 el['api-key'].value = config.apiKey
 el['base-url'].value = config.baseURL === DEFAULT_BASE_URL ? '' : config.baseURL
+el['base-url'].placeholder = DEFAULT_BASE_URL
 el.source.value = state.input
 bind()
 renderAll()

@@ -240,6 +240,139 @@ async fn balance(request: BalanceRequest) -> Value {
     })
 }
 
+#[derive(Deserialize)]
+struct OcrRequest {
+    #[serde(default, rename = "apiKey")]
+    api_key: String,
+    #[serde(default, rename = "baseURL")]
+    base_url: String,
+    #[serde(default, rename = "fileName")]
+    file_name: String,
+    #[serde(default)]
+    mime: String,
+    /// base64 编码的图片内容（不含 data: 前缀）
+    #[serde(default)]
+    data: String,
+}
+
+/// 调用 DeepSeek OCR 接口识别图片文字：POST {base}/v1/tools/ocr（multipart）
+#[tauri::command]
+async fn ocr(request: OcrRequest) -> Value {
+    use base64::Engine;
+
+    let api_key = request.api_key.trim();
+    if api_key.is_empty() {
+        return error_json("NO_KEY", "请先在「设置」里填写 API Key。");
+    }
+
+    let bytes = match base64::engine::general_purpose::STANDARD.decode(request.data.trim()) {
+        Ok(bytes) => bytes,
+        Err(_) => return error_json("BAD_IMAGE", "图片数据无法解析。"),
+    };
+    if bytes.is_empty() {
+        return error_json("BAD_IMAGE", "图片内容是空的。");
+    }
+
+    let file_name = if request.file_name.trim().is_empty() {
+        "image.png".to_string()
+    } else {
+        request.file_name.trim().to_string()
+    };
+    let mime = if request.mime.trim().is_empty() {
+        "application/octet-stream".to_string()
+    } else {
+        request.mime.trim().to_string()
+    };
+
+    let part = match reqwest::multipart::Part::bytes(bytes)
+        .file_name(file_name)
+        .mime_str(&mime)
+    {
+        Ok(part) => part,
+        Err(error) => return error_json("BAD_IMAGE", format!("图片类型无法识别：{error}")),
+    };
+
+    let form = reqwest::multipart::Form::new()
+        .text("purpose", "text_recognition")
+        .part("file", part);
+
+    let url = format!("{}/v1/tools/ocr", resolve_base_url(&request.base_url));
+
+    let client = match reqwest::Client::builder()
+        .timeout(Duration::from_secs(240))
+        .build()
+    {
+        Ok(client) => client,
+        Err(error) => return error_json("INTERNAL", error.to_string()),
+    };
+
+    let response = match client
+        .post(&url)
+        .bearer_auth(api_key)
+        .multipart(form)
+        .send()
+        .await
+    {
+        Ok(response) => response,
+        Err(error) => return error_json("NETWORK", format!("调用 OCR 接口失败：{error}")),
+    };
+
+    let status = response.status();
+    let body = response.text().await.unwrap_or_default();
+    let data: Value = serde_json::from_str(&body).unwrap_or(Value::Null);
+
+    if !status.is_success() {
+        let message = if data.is_null() {
+            format!("OCR 接口返回 {status}")
+        } else {
+            upstream_message(&data)
+        };
+        // 按官方 OCR 文档的错误表细分，前端好给具体提示
+        let code = match status.as_u16() {
+            400 => "BAD_REQUEST",
+            402 => "QUOTA",
+            408 => "UPLOAD_SLOW",
+            413 => "TOO_LARGE",
+            429 => "RATE_LIMIT",
+            500 => "UPLOAD_FAILED",
+            503 => "BUSY",
+            504 => "TIMEOUT",
+            other => status_code(other),
+        };
+        return error_json(code, message);
+    }
+
+    // 识别开始后状态码是 200，失败时响应体是错误对象
+    if let Some(message) = data
+        .get("error")
+        .and_then(|value| value.get("message"))
+        .and_then(|value| value.as_str())
+    {
+        return error_json("OCR_FAILED", message.to_string());
+    }
+
+    let pages = data
+        .get("pages")
+        .and_then(|value| value.as_array())
+        .cloned()
+        .unwrap_or_default();
+
+    let text = pages
+        .iter()
+        .filter_map(|page| page.get("text").and_then(|value| value.as_str()))
+        .collect::<Vec<_>>()
+        .join("\n\n");
+
+    json!({
+        "ok": true,
+        "text": text,
+        "pageCount": data
+            .get("page_count")
+            .and_then(|value| value.as_u64())
+            .unwrap_or(pages.len() as u64),
+    })
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // GUI 版没有控制台，把 panic 文本落盘，方便事后排查
@@ -259,7 +392,7 @@ pub fn run() {
                 let _ = window.set_focus();
             }
         }))
-        .invoke_handler(tauri::generate_handler![translate, models, balance])
+        .invoke_handler(tauri::generate_handler![translate, models, balance, ocr])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
