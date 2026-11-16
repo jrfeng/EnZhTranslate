@@ -54,16 +54,18 @@ WebView2 error: WindowsError(HRESULT(0x8000FFFF) "灾难性故障")
 
 ## 构建
 
+### Windows
+
 前置：Node.js（前端打包）+ Rust（stable，`x86_64-pc-windows-msvc`）+ MSVC Build Tools + Windows SDK。本机都已就绪。
 
-前端现在是 **Material 3（`@material/web`）+ esbuild 打包**，所以多了一步构建：
+前端是 **Web Awesome + esbuild 打包**，所以多了一步构建：
 
 ```powershell
-npm install          # 装 @material/web、lit、esbuild、@tauri-apps/cli
+npm install          # 装 @awesome.me/webawesome、esbuild、@tauri-apps/cli
 npm run build        # esbuild 把 src/ 打包成 dist/
 ```
 
-产物 `dist/`（app.js 约 250 KB，含 lit 与 Material 组件）。
+产物 `dist/`（app.js 约 257 KB，含 lit 与 Web Awesome 组件）。
 
 然后打 exe 或安装包：
 
@@ -85,6 +87,36 @@ npx tauri build           # 出 exe + NSIS 安装包（会自动跑 npm run buil
 ```powershell
 npm run build && npx tauri dev
 ```
+
+### macOS
+
+前置：**Xcode 命令行工具**（`xcode-select --install`）、Rust、Node.js。
+
+```bash
+chmod +x build-macos.sh
+./build-macos.sh
+```
+
+脚本会自动检查环境、装依赖、打包前端、生成 `.app` 和 `.dmg`，最后打印产物路径。
+
+| 参数 | 作用 |
+|---|---|
+| （无） | 构建当前架构（Apple Silicon 出 arm64，Intel 出 x86_64） |
+| `--universal` | 同时支持 Intel + Apple Silicon（会先 `rustup target add` 两个目标，体积翻倍） |
+| `--app-only` | 只生成 `.app`，跳过 `.dmg` |
+| `--help` | 显示用法 |
+
+产物在 `src-tauri/target/release/bundle/macos/`（`.app`）和 `.../bundle/dmg/`（`.dmg`）。
+
+macOS 的平台配置单独放在 `src-tauri/tauri.macos.conf.json`（打包目标是 `app` + `dmg`，图标用 `icon.icns`），Tauri 会在 macOS 上自动合并它，Windows 构建不受影响。
+
+未签名的 `.app` 首次打开会被 Gatekeeper 拦下：右键 →「打开」，或
+
+```bash
+xattr -dr com.apple.quarantine /Applications/EnZhTranslate.app
+```
+
+要分发给别人就得用 Apple Developer 证书签名 + 公证，本机自用不需要。
 
 ## 首次使用
 
@@ -120,11 +152,16 @@ src-tauri/
   Cargo.toml
   build.rs
   tauri.conf.json        窗口 1180x780、frontendDist=../dist、beforeBuildCommand
+  tauri.macos.conf.json  macOS 专用：targets=app+dmg、icon.icns
   capabilities/default.json
-  icons/                 由 icon-src.png 生成（32/128/256/512 + ico）
+  icons/                 由 icon-src.png 生成（32/128/256/512 + ico + icns）
   src/main.rs            入口
   src/lib.rs             translate / models / balance 三个命令
 icon-src.png             图标源文件（1024×1024）
 icon-gen.py              画图标
 icon-sizes.py            生成各尺寸与 .ico
+icon-icns.py             生成 macOS 的 .icns
+build-macos.sh           macOS 一键构建（.app / .dmg）
+编译.cmd                 Windows 一键编译 exe
+测试版.cmd               Windows 测试版（debug）构建
 ```
