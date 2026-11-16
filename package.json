@@ -1,14 +1,19 @@
 {
   "name": "en-zh-translate-tauri",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.5.0",
   "description": "英译中桌面版（Tauri）",
   "scripts": {
+    "build": "node scripts/build.mjs",
     "tauri": "tauri",
     "dev": "tauri dev",
-    "build": "tauri build"
+    "bundle": "tauri build"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2"
+    "@tauri-apps/cli": "^2",
+    "esbuild": "^0.28.2"
+  },
+  "dependencies": {
+    "@awesome.me/webawesome": "^3.14.0"
   }
 }

@@ -10,6 +10,10 @@
 const MAX_TERMS = 50
 const COPIED_MS = 1600
 
+/** 余额提醒阈值：低于该数值时变色（橙色 < 3，红色 < 2） */
+const BALANCE_WARN = 3
+const BALANCE_DANGER = 2
+
 const DEFAULT_BASE_URL = 'https://api.deepseek.com'
 const DEFAULT_MODEL = 'deepseek-chat'
 
@@ -33,7 +37,16 @@ const KEYS = {
   immediate: 'enzh-app.immediate',
   termsOpen: 'enzh-app.terms-open',
   view: 'enzh-app.view',
+  theme: 'enzh-app.theme',
 }
+
+/** 内置主题：auto 跟随系统 / b 浅色 / a 深色 / c 风格化 */
+const THEMES = [
+  { id: 'auto', name: '跟随系统' },
+  { id: 'b', name: '浅色' },
+  { id: 'a', name: '深色' },
+  { id: 'c', name: '风格化' },
+]
 
 const config = { apiKey: '', baseURL: DEFAULT_BASE_URL, model: DEFAULT_MODEL }
 
@@ -68,6 +81,8 @@ const state = {
   selectedModel: DEFAULT_MODEL,
   models: [],
   settingsOpen: false,
+  /** 当前主题 id：auto / a / b / c */
+  theme: 'auto',
   /** 是否正在显示「清空术语」确认框。 */
   confirmClear: false,
   /** 每发起一次翻译自增，用于丢弃过期响应。 */
@@ -79,8 +94,10 @@ const state = {
 const el = {}
 for (const id of [
   'settings-toggle',
+  'settings-dot',
   'settings',
   'balance',
+  'theme-select',
   'api-key',
   'base-url',
   'save-settings',
@@ -103,9 +120,7 @@ for (const id of [
   'term-target',
   'term-add',
   'terms-list',
-  'auto-copy-label',
   'auto-copy',
-  'immediate-label',
   'immediate',
   'stale',
   'view-toggle',
@@ -481,6 +496,10 @@ function loadPersisted() {
   state.immediate = readStore(KEYS.immediate) === '1'
   state.termsOpen = readStore(KEYS.termsOpen) !== '0'
   state.view = readStore(KEYS.view) === 'source' ? 'source' : 'preview'
+
+  const savedTheme = readStore(KEYS.theme)
+  state.theme = THEMES.some((item) => item.id === savedTheme) ? savedTheme : 'auto'
+
   state.selectedModel = config.model
 }
 
@@ -533,20 +552,20 @@ function renderChrome() {
   el['view-toggle'].disabled = state.output.length === 0
   el['view-toggle'].textContent = state.view === 'preview' ? 'Markdown' : '预览'
 
-  el['auto-copy'].checked = state.autoCopy
-  el['auto-copy-label'].classList.toggle('on', state.autoCopy)
+  el['auto-copy'].setAttribute('aria-checked', String(state.autoCopy))
+  el['auto-copy'].classList.toggle('on', state.autoCopy)
 
-  el['immediate'].checked = state.immediate
-  el['immediate-label'].classList.toggle('on', state.immediate)
+  el['immediate'].setAttribute('aria-checked', String(state.immediate))
+  el['immediate'].classList.toggle('on', state.immediate)
 
   el.settings.hidden = !state.settingsOpen
   el['settings-toggle'].setAttribute('aria-expanded', String(state.settingsOpen))
+  el['settings-dot'].hidden = config.apiKey.length > 0
 
   el['terms-toggle'].textContent = state.termsOpen ? '收起' : '展开'
   el['terms-body'].hidden = !state.termsOpen
   el['term-count'].textContent = String(state.terms.length)
   el['term-clear'].disabled = state.terms.length === 0
-  el['confirm-modal'].hidden = !state.confirmClear
   el['term-add'].disabled = !(
     state.termSource.trim().length > 0 &&
     state.termTarget.trim().length > 0 &&
@@ -568,9 +587,8 @@ function renderOutput() {
     const text = document.createElement('div')
     text.textContent = state.message
     box.appendChild(text)
-    const retry = document.createElement('button')
-    retry.type = 'button'
-    retry.className = 'btn'
+    const retry = document.createElement('wa-button')
+    retry.setAttribute('appearance', 'plain')
     retry.textContent = '重试'
     retry.addEventListener('click', () => void run())
     box.appendChild(retry)
@@ -599,6 +617,15 @@ function renderOutput() {
   out.innerHTML = '<div class="md">' + renderMarkdown(state.output) + '</div>'
 }
 
+const TERM_SEPARATOR = ' 翻译成 '
+
+/** 把「原文 翻译成 译文」拆成两段，渲染时分开显示 */
+function splitTerm(term) {
+  const index = term.indexOf(TERM_SEPARATOR)
+  if (index < 0) return [term, '']
+  return [term.slice(0, index), term.slice(index + TERM_SEPARATOR.length)]
+}
+
 function renderTerms() {
   const list = el['terms-list']
   list.replaceChildren()
@@ -615,10 +642,12 @@ function renderTerms() {
     const row = document.createElement('div')
     row.className = 'term'
 
-    const text = document.createElement('span')
-    text.className = 'term-text'
-    text.title = term
-    text.textContent = term
+    const [sourceText, targetText] = splitTerm(term)
+
+    const from = document.createElement('span')
+    from.className = 'term-token'
+    from.title = term
+    from.textContent = sourceText
 
     const remove = document.createElement('button')
     remove.type = 'button'
@@ -633,7 +662,22 @@ function renderTerms() {
       renderChrome()
     })
 
-    row.append(text, remove)
+    row.append(from)
+
+    if (targetText.length > 0) {
+      const arrow = document.createElement('span')
+      arrow.className = 'term-arrow'
+      arrow.textContent = '翻译成'
+
+      const to = document.createElement('span')
+      to.className = 'term-token'
+      to.title = term
+      to.textContent = targetText
+
+      row.append(arrow, to)
+    }
+
+    row.append(remove)
     list.appendChild(row)
   })
 }
@@ -644,7 +688,7 @@ function renderModels() {
 
   const list = state.models.length > 0 ? state.models : [{ id: config.model || DEFAULT_MODEL }]
   for (const item of list) {
-    const option = document.createElement('option')
+    const option = document.createElement('wa-option')
     option.value = item.id
     option.textContent = item.id
     select.appendChild(option)
@@ -652,8 +696,9 @@ function renderModels() {
 
   const wanted = state.selectedModel || config.model
   const exists = list.some((item) => item.id === wanted)
-  select.value = exists ? wanted : list[0].id
-  state.selectedModel = select.value
+  const next = exists ? wanted : list[0].id
+  select.value = next
+  state.selectedModel = next
 }
 
 function render() {
@@ -849,7 +894,16 @@ async function refreshBalance() {
   el.balance.textContent = '余额 ' + symbol + payload.total
   el.balance.title =
     '充值 ' + (payload.toppedUp || '0') + ' · 赠送 ' + (payload.granted || '0') + '（点击刷新）'
-  el.balance.classList.toggle('low', payload.available === false)
+
+  // 余额偏低时变色提醒：< 3 橙色，< 2 红色，不可用直接红色
+  const total = Number.parseFloat(payload.total)
+  const hasTotal = Number.isFinite(total)
+  el.balance.variant =
+    payload.available === false || (hasTotal && total < BALANCE_DANGER)
+      ? 'danger'
+      : hasTotal && total < BALANCE_WARN
+        ? 'warning'
+        : 'brand'
   el.balance.hidden = false
 }
 
@@ -955,14 +1009,14 @@ function bind() {
     render()
   })
 
-  el['auto-copy'].addEventListener('change', () => {
-    state.autoCopy = el['auto-copy'].checked
+  el['auto-copy'].addEventListener('click', () => {
+    state.autoCopy = !state.autoCopy
     writeStore(KEYS.autoCopy, state.autoCopy ? '1' : '0')
     renderChrome()
   })
 
-  el['immediate'].addEventListener('change', () => {
-    state.immediate = el['immediate'].checked
+  el['immediate'].addEventListener('click', () => {
+    state.immediate = !state.immediate
     writeStore(KEYS.immediate, state.immediate ? '1' : '0')
     renderChrome()
   })
@@ -976,36 +1030,23 @@ function bind() {
   el['term-clear'].addEventListener('click', () => {
     if (state.terms.length === 0) return
     state.confirmClear = true
-    renderChrome()
-    el['confirm-cancel'].focus()
+    el['confirm-modal'].open = true
+  })
+
+  el['confirm-modal'].addEventListener('wa-after-hide', () => {
+    state.confirmClear = false
   })
 
   el['confirm-cancel'].addEventListener('click', () => {
-    state.confirmClear = false
-    renderChrome()
-    el['term-clear'].focus()
+    el['confirm-modal'].open = false
   })
 
   el['confirm-ok'].addEventListener('click', () => {
-    state.confirmClear = false
     state.terms = []
     persistTerms()
     renderTerms()
     renderChrome()
-    el['term-source'].focus()
-  })
-
-  el['confirm-modal'].addEventListener('click', (event) => {
-    if (event.target !== el['confirm-modal']) return
-    state.confirmClear = false
-    renderChrome()
-  })
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key !== 'Escape' || !state.confirmClear) return
-    state.confirmClear = false
-    renderChrome()
-    el['term-clear'].focus()
+    el['confirm-modal'].open = false
   })
 
   el['term-source'].addEventListener('input', () => {
@@ -1036,11 +1077,17 @@ function bind() {
     const base = el['base-url'].value.trim()
     config.baseURL = base.length > 0 ? base : DEFAULT_BASE_URL
     saveSettings()
+    renderChrome()
     void refreshModels()
     void refreshBalance()
   })
 
   el['balance'].addEventListener('click', () => void refreshBalance())
+
+  el['theme-select'].addEventListener('change', () => {
+    applyTheme(el['theme-select'].value)
+    writeStore(KEYS.theme, state.theme)
+  })
 
   el['model-select'].addEventListener('change', () => {
     state.selectedModel = el['model-select'].value
@@ -1050,9 +1097,47 @@ function bind() {
   })
 }
 
+/* ---------------------------------------------------------------- 主题 */
+
+const DARK_QUERY = window.matchMedia('(prefers-color-scheme: dark)')
+
+/** 把主题 id 解析成实际生效的 a / b / c（auto 跟随系统深浅色） */
+function resolveTheme(theme) {
+  if (theme === 'auto') return DARK_QUERY.matches ? 'a' : 'b'
+  return theme === 'a' || theme === 'b' || theme === 'c' ? theme : 'b'
+}
+
+/** 应用主题：切换 html 上的 data-theme，并同步 Web Awesome 的深色类 */
+function applyTheme(theme) {
+  const chosen = THEMES.some((item) => item.id === theme) ? theme : 'auto'
+  state.theme = chosen
+  const id = resolveTheme(chosen)
+  document.documentElement.dataset.theme = id
+  document.documentElement.classList.toggle('wa-dark', id === 'a')
+}
+
+// 选「跟随系统」时，系统深浅色一变就跟着变
+DARK_QUERY.addEventListener('change', () => {
+  if (state.theme === 'auto') applyTheme('auto')
+})
+
+function renderThemeSelect() {
+  const select = el['theme-select']
+  select.replaceChildren()
+  for (const theme of THEMES) {
+    const option = document.createElement('wa-option')
+    option.value = theme.id
+    option.textContent = theme.name
+    select.appendChild(option)
+  }
+  select.value = state.theme
+}
+
 /* ---------------------------------------------------------------- 启动 */
 
 loadPersisted()
+applyTheme(state.theme)
+renderThemeSelect()
 el['api-key'].value = config.apiKey
 el['base-url'].value = config.baseURL === DEFAULT_BASE_URL ? '' : config.baseURL
 el.source.value = state.input
