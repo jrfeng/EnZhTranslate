@@ -241,8 +241,9 @@ html[data-theme='d'] .output.is-empty::before {
   inset: 0;
   z-index: -1;
   background: url('/assets/empty-watermark.webp') center / 58% auto no-repeat;
-  opacity: 0.16;
+  opacity: 0.18;
   pointer-events: none;
+  image-rendering: pixelated;
   -webkit-mask-image: radial-gradient(closest-side, #000 52%, transparent 82%);
   mask-image: radial-gradient(closest-side, #000 52%, transparent 82%);
 }
