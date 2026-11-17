@@ -1,6 +1,6 @@
 # 英译中 · EnZhTranslate
 
-![version](https://img.shields.io/badge/version-0.6.3-blue)
+![version](https://img.shields.io/badge/version-0.6.4-blue)
 ![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 ![stack](https://img.shields.io/badge/Tauri%202-Rust%20%2B%20Web%20Awesome-informational)
 ![license](https://img.shields.io/badge/license-MIT-green)

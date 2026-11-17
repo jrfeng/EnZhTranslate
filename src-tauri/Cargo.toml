@@ -1,6 +1,6 @@
 [package]
 name = "en-zh-translate"
-version = "0.6.3"
+version = "0.6.4"
 description = "English to Chinese translator"
 edition = "2021"
 license = "MIT"
