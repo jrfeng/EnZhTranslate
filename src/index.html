@@ -67,7 +67,7 @@
               <wa-button id="settings-toggle" appearance="plain" size="s">设置</wa-button>
               <span class="status-dot" id="settings-dot" hidden aria-hidden="true"></span>
             </span>
-            <span class="toolbar-divider" aria-hidden="true"></span>
+            <span class="toolbar-divider" id="balance-divider" hidden aria-hidden="true"></span>
             <wa-tag id="balance" variant="brand" size="s" hidden>余额</wa-tag>
           </div>
         </header>
@@ -75,7 +75,7 @@
         <section class="card settings" id="settings" hidden>
           <div class="card-head">
             <span class="card-title">设置</span>
-            <span class="hint" id="settings-hint">API Key 只存在本机浏览器里，随请求发给本机的 Rust 进程后转发给模型接口。</span>
+            <span class="hint" id="settings-hint">API Key 只保存在本机。</span>
           </div>
           <div class="settings-body">
             <span class="field-label">API Key</span>
@@ -83,6 +83,7 @@
             <span class="field-label">接口地址</span>
             <wa-input id="base-url" size="s" appearance="outlined" class="field-url"></wa-input>
             <wa-button id="save-settings" variant="brand" size="s">保存并读取模型</wa-button>
+            <wa-button id="close-settings" appearance="outlined" size="s">关闭</wa-button>
           </div>
         </section>
 

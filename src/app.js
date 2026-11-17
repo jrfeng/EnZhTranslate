@@ -166,8 +166,10 @@ const el = {}
 for (const id of [
   'settings-toggle',
   'settings-dot',
+  'close-settings',
   'settings',
   'balance',
+  'balance-divider',
   'theme-select',
   'source-lang',
   'target-lang',
@@ -666,7 +668,7 @@ function renderChrome() {  const loading = state.phase === 'loading'
   el['pick-image'].hidden = !usesDeepSeekEndpoint()
   el['pick-image'].disabled = ocrBusy || loading
   // 非 DeepSeek 地址没有余额接口
-  if (!usesDeepSeekEndpoint()) el.balance.hidden = true
+  if (!usesDeepSeekEndpoint()) setBalanceVisible(false)
   el['image-refresh'].hidden = !state.ocrDone
   el['image-refresh'].disabled = ocrBusy || loading
   el['image-refresh'].classList.toggle('is-spinning', ocrBusy)
@@ -1031,21 +1033,21 @@ function addTerm() {
 async function refreshBalance() {
   // 余额接口只有 DeepSeek 官方提供，其它地址直接关掉
   if (!usesDeepSeekEndpoint()) {
-    el.balance.hidden = true
+    setBalanceVisible(false)
     return
   }
   if (config.apiKey.length === 0) {
-    el.balance.hidden = true
+    setBalanceVisible(false)
     return
   }
 
   const payload = await invokeTauri('balance', { apiKey: config.apiKey, baseURL: config.baseURL })
   if (payload === null || payload === undefined || payload.ok !== true) {
-    el.balance.hidden = true
+    setBalanceVisible(false)
     return
   }
   if (typeof payload.total !== 'string' || payload.total.length === 0) {
-    el.balance.hidden = true
+    setBalanceVisible(false)
     return
   }
 
@@ -1065,6 +1067,17 @@ async function refreshBalance() {
         ? 'warning'
         : 'brand'
   el.balance.hidden = false
+  if (el['balance-divider'] !== undefined && el['balance-divider'] !== null) {
+    el['balance-divider'].hidden = false
+  }
+}
+
+/** 余额和它左边的分隔线一起显示 / 隐藏 */
+function setBalanceVisible(visible) {
+  el.balance.hidden = !visible
+  if (el['balance-divider'] !== undefined && el['balance-divider'] !== null) {
+    el['balance-divider'].hidden = !visible
+  }
 }
 
 /* ------------------------------------------------------------ 设置与模型 */
@@ -1345,6 +1358,11 @@ function bind() {
 
   el['settings-toggle'].addEventListener('click', () => {
     state.settingsOpen = !state.settingsOpen
+    renderChrome()
+  })
+
+  el['close-settings'].addEventListener('click', () => {
+    state.settingsOpen = false
     renderChrome()
   })
 
