@@ -64,17 +64,6 @@
 
 ## 快速开始
 
-### 下载安装
-
-| 产物 | 大小 | 适用场景 |
-|---|---|---|
-| `build/EnZhTranslate_0.6.2_x64-setup.exe` | 2.03 MB | 推荐。自动检测并安装 WebView2，带开始菜单项与卸载入口 |
-| `EnZhTranslate.exe`（免安装） | 约 7 MB | 直接分发单文件，目标机器需已安装 WebView2 |
-
-安装后位于 `%LOCALAPPDATA%\Programs\EnZhTranslate\`。
-
-> 产物未做代码签名，首次运行会触发 SmartScreen 提示，选择「更多信息 → 仍要运行」即可。
-
 ### 首次配置
 
 打开应用 → 点击「设置」→ 填写 API Key 与接口地址（默认 `https://api.deepseek.com`）→ 点击「保存并读取模型」。
@@ -312,6 +301,8 @@ WebView2 error: WindowsError(HRESULT(0x8000FFFF) "灾难性故障")
 ```
 
 将 exe 复制到工作区外（如 `%LOCALAPPDATA%\Programs\EnZhTranslate\`）即可正常运行。源码放在工作区内没有问题，仅运行位置受限。
+
+**产物未做代码签名。** Windows 首次运行会触发 SmartScreen 提示，选择「更多信息 → 仍要运行」；macOS 首次打开需右键「打开」或执行 `xattr -dr com.apple.quarantine`。
 
 ---
 
