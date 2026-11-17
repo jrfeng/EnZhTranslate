@@ -260,18 +260,23 @@ fc-cache -f
 
 ### 持续集成
 
-`.github/workflows/build.yml` 提供自动构建：
+`.github/workflows/build.yml` 提供三平台自动构建：
 
 | 平台 | Runner | 产物 |
 |---|---|---|
 | Windows | `windows-latest` | NSIS 安装包 |
-| macOS（Apple Silicon） | `macos-14` | 原生 arm64 `.dmg` |
+| macOS（通用） | `macos-latest` | Intel + Apple Silicon 通用 `.dmg` |
+| Linux | `ubuntu-22.04` | `.deb` 与 `.AppImage` |
 
-- 推送 `v*` tag 时自动构建，并把产物挂到一个**草稿 Release** 上，人工确认后再发布
-- 也可在 Actions 页面手动触发（`workflow_dispatch`），此时产物作为 workflow artifact 上传
+构建流程：先在各自 runner 上 `npx tauri build`，再把产物**复制成英文文件名**，最后汇总到一个 job 里创建**草稿 Release**，人工确认后再发布。
+
+> 为什么要改名：GitHub Release 会上传资源名中的中文抹掉（`Fish翻译_0.7.1_x64-setup.exe` 会变成 `Fish._0.7.1_x64-setup.exe`）。
+> 因此 Release 里的资源统一是 `FishTranslate_*`，**安装后的应用名仍由 `productName` 决定，显示「Fish翻译」**。
+
+- 推送 `v*` tag 时自动构建并创建草稿 Release
+- 也可在 Actions 页面手动触发（`workflow_dispatch`），此时产物只作为 workflow artifact 上传，不创建 Release
 - 使用 `GITHUB_TOKEN`，无需额外 secret；未配置代码签名，产物与本地构建一样需要用户手动放行
-- 私有仓库会消耗 Actions 分钟数（Windows 2×、macOS 10×）
-- Linux 构建暂未接入 CI，需要时用 `build-linux.sh` 在本地出 `.deb` / `.AppImage`（workflow 里保留了注释掉的 job，可直接恢复）
+- 私有仓库会消耗 Actions 分钟数（Windows 2×、macOS 10×、Linux 1×）
 
 ---
 
