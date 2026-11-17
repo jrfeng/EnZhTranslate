@@ -313,6 +313,7 @@ build-linux.sh           Linux 一键构建（deb / AppImage）
 build-win.cmd            Windows 一键构建（正式 exe）
 debug/                   测试与诊断脚本
   build-win-debug.cmd    Windows debug 版构建并安装到测试目录
+  build-macos-debug.sh   macOS debug .app 构建（可 --open 直接打开）
   run-linux-debug.cmd    经 WSL 启动 Linux debug 版
   diagnose.cmd           直接运行 debug exe 并打印退出码 / panic 日志
   cargo-run.cmd          cargo run，保留控制台看 panic
