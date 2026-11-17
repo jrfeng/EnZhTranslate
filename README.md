@@ -89,10 +89,10 @@
 |---|---|---|
 | 翻译 | `POST /chat/completions` | OpenAI 兼容格式，兼容第三方服务 |
 | 模型列表 | `GET /models` | 用于填充模型下拉框 |
-| 余额 | `GET /user/balance` | DeepSeek 专有；不可用时自动隐藏 |
+| 余额 | `GET /user/balance` | DeepSeek 专有；接口地址不是官方域名时自动关闭 |
 | 图片 OCR | `POST /v1/tools/ocr` | DeepSeek 专有，`multipart/form-data`，按页计费 |
 
-**接口地址不是 DeepSeek 官方域名时，图片翻译能力会整体关闭**（按钮隐藏、粘贴拦截、调用兜底），因为 OCR 接口只在 DeepSeek 官方提供。翻译与余额功能不受影响。
+**接口地址不是 DeepSeek 官方域名时，图片翻译与余额显示会整体关闭**（图片按钮隐藏、粘贴拦截、调用兜底、余额条隐藏），因为 OCR 与余额接口只在 DeepSeek 官方提供。翻译与模型列表不受影响。
 
 余额低于 3 元显示橙色，低于 2 元显示红色。
 

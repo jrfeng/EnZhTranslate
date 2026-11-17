@@ -622,6 +622,8 @@ function renderChrome() {
   el.clear.disabled = (state.input.length === 0 && state.image === null) || ocrBusy
   el['pick-image'].hidden = !usesDeepSeekEndpoint()
   el['pick-image'].disabled = ocrBusy || loading
+  // 非 DeepSeek 地址没有余额接口
+  if (!usesDeepSeekEndpoint()) el.balance.hidden = true
   el['image-refresh'].hidden = !state.ocrDone
   el['image-refresh'].disabled = ocrBusy || loading
   el['image-refresh'].classList.toggle('is-spinning', ocrBusy)
@@ -968,6 +970,11 @@ function addTerm() {
  * 其它 OpenAI 兼容服务通常没有这个接口，失败时就隐藏，不打扰用户。
  */
 async function refreshBalance() {
+  // 余额接口只有 DeepSeek 官方提供，其它地址直接关掉
+  if (!usesDeepSeekEndpoint()) {
+    el.balance.hidden = true
+    return
+  }
   if (config.apiKey.length === 0) {
     el.balance.hidden = true
     return
