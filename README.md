@@ -6,6 +6,11 @@
 ![license](https://img.shields.io/badge/license-MIT-green)
 ![ai-built](https://img.shields.io/badge/built%20with-DeepSeek%20Harness-4D6BFE)
 
+> **一个个人用的小工具，顺手开源出来。**
+>
+> 最初只为解决自己的翻译需求而写，功能按个人习惯裁剪：没有账号体系、没有云同步、不做团队协作。
+> 现在开放出来，有需要的朋友可以直接拿去用，也欢迎按自己的场景改。
+
 > **本项目完全由 AI 编码完成。**
 >
 > 代码、界面、图标、构建脚本、CI 流水线与文档，全部在 [DeepSeek Harness](https://deepseek-harness.github.io/deepseek-harness/en/guide/quickstart) 的会话中由 AI 代理生成与迭代，没有手写代码。
@@ -352,5 +357,7 @@ WebView2 error: WindowsError(HRESULT(0x8000FFFF) "灾难性故障")
 ## 许可
 
 本项目基于 [MIT License](LICENSE) 开源。
+
+它本来只是给自己用的小工具，开源出来是希望有同样需求的人能少折腾一点。尽管拿去用、改、再分发，不需要征求意见；如果它恰好帮你省了点事，那这个项目就值了。
 
 Copyright (c) 2026 jrfeng
