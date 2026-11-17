@@ -1,6 +1,6 @@
 @echo off
 setlocal
-cd /d "%~dp0src-tauri"
+cd /d "%~dp0..\src-tauri"
 set "PATH=%USERPROFILE%\.cargo\bin;%PATH%"
 
 echo Debug build keeps the console, so the panic message is visible.

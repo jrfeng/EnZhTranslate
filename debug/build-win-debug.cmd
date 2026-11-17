@@ -1,6 +1,6 @@
 @echo off
 setlocal
-cd /d "%~dp0"
+cd /d "%~dp0.."
 set "PATH=%USERPROFILE%\.cargo\bin;%PATH%"
 
 where node >nul 2>nul
@@ -27,7 +27,7 @@ call npm run build
 if errorlevel 1 (echo Frontend build failed. & pause & exit /b 1)
 
 echo   [2/2] Building debug exe ...
-cd /d "%~dp0src-tauri"
+cd /d "%~dp0..\src-tauri"
 cargo build
 if errorlevel 1 (echo Debug build failed. & pause & exit /b 1)
 

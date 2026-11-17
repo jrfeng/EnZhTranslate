@@ -5,6 +5,16 @@
    html[data-theme="c"] 高对比粗野（2px 黑描边 + 硬阴影）
    ========================================================================== */
 
+/* 跨平台字体栈：把三个平台常见的中英文字体族都列上，避免中文渲染成方块
+   （Linux 最小安装默认没有中日韩字体，需要装 fonts-noto-cjk） */
+:root {
+  --app-font-sans: 'Roboto', 'Segoe UI', 'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC', 'Source Han Sans SC',
+    'WenQuanYi Micro Hei', sans-serif;
+  --wa-font-family-body: var(--app-font-sans);
+  --wa-font-family-heading: var(--app-font-sans);
+}
+
 /* ============================ 主题 A · 深色专业 ============================ */
 
 html[data-theme='a'] {

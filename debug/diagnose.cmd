@@ -1,12 +1,12 @@
 @echo off
 setlocal
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 echo.
 echo   Running debug build (console stays open) ...
 echo.
 
-"%~dp0src-tauri\target\debug\en-zh-translate.exe"
+"%~dp0..\src-tauri\target\debug\en-zh-translate.exe"
 set "CODE=%ERRORLEVEL%"
 
 echo.

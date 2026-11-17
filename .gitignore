@@ -4,10 +4,13 @@ src-tauri/gen/
 dist/
 *.log
 
-# 临时预览页（图标/样式候选等），不入库
-临时预览/
+# 临时预览页与调试产物（图标/样式候选、截图中间文件等），不入库
+temp/
 
 # 构建产物与安装包不入库（在 Releases 或本地分发）
+build/
 EnZhTranslate_*.exe
 *.msi
 *.zip
+*.deb
+*.AppImage

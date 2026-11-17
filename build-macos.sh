@@ -84,9 +84,14 @@ if [ "$UNIVERSAL" -eq 1 ]; then
 fi
 
 say "产物"
-find "$BUNDLE_DIR" -maxdepth 2 -name '*.app' -o -maxdepth 2 -name '*.dmg' 2>/dev/null | while read -r item; do
+find "$BUNDLE_DIR" -maxdepth 2 \( -name '*.app' -o -name '*.dmg' \) 2>/dev/null | while read -r item; do
   echo "    $item  ($(du -sh "$item" | cut -f1))"
 done
+
+# 统一收集到仓库根目录的 build/（已在 .gitignore 中排除）
+mkdir -p build
+find "$BUNDLE_DIR" -maxdepth 2 \( -name '*.dmg' \) -exec cp -Rf {} build/ \; 2>/dev/null
+echo "    dmg 已复制到 ./build/"
 
 cat <<'TIP'
 
