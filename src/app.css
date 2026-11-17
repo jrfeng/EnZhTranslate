@@ -857,14 +857,38 @@ html[data-theme='c'] .toggle.on {
 /* 图片按钮悬浮在输入框右下角（阴影加到圆角的 part 上，避免宿主矩形露出直角） */
 .pick-image-fab {
   position: absolute;
-  right: 12px;
-  bottom: 12px;
+  right: 14px;
+  bottom: 14px;
   z-index: 2;
 }
 
+/* 圆形悬浮按钮（FAB 风格） */
 .pick-image-fab::part(button) {
-  background: var(--app-panel);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.14);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--app-accent);
+  color: var(--app-accent-on);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+  transition: filter 0.15s ease, transform 0.12s ease;
+}
+
+.pick-image-fab::part(button):hover {
+  filter: brightness(1.08);
+}
+
+.pick-image-fab::part(button):active {
+  transform: scale(0.96);
+}
+
+.pick-image-fab svg {
+  display: block;
 }
 
 .hl {

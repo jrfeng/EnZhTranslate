@@ -2,6 +2,22 @@
 
 版本 0.6.2 · 三套内置主题（Web Awesome）+ 图片 OCR 翻译。原生桌面版：前端静态页打进程序里，Rust 侧四个命令直接调模型接口，**运行时不需要 Node，也不需要开浏览器**。
 
+## 界面
+
+**浅色**
+
+![浅色主题](docs/screenshots/theme-light.png)
+
+**深色**
+
+![深色主题](docs/screenshots/theme-dark.png)
+
+**风格化**（2px 黑描边 + 硬阴影 + 黄黑配色）
+
+![风格化主题](docs/screenshots/theme-bold.png)
+
+> 截图里的接口调用是模拟数据，用于展示界面效果。
+
 ## 功能
 
 - 左栏英文输入（Markdown 语法高亮）、右栏中文译文（Markdown 渲染 / 源码切换）

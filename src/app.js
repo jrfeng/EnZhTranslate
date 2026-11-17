@@ -500,6 +500,20 @@ function highlightSource(text) {
   return html + '\n'
 }
 
+/** OCR 只有 DeepSeek 官方接口提供，其它兼容地址一律关闭图片功能 */
+function usesDeepSeekEndpoint() {
+  const raw = String(config.baseURL || '').trim()
+  if (raw.length === 0) return true
+  try {
+    const host = new URL(raw).hostname.toLowerCase()
+    return host === 'api.deepseek.com' || host.endsWith('.api.deepseek.com')
+  } catch (error) {
+    return false
+  }
+}
+
+const OCR_UNSUPPORTED = '当前接口地址不支持图片识别，请改用 https://api.deepseek.com'
+
 /* ------------------------------------------------------------ 本地存储 */
 
 function readStore(key) {
@@ -606,6 +620,7 @@ function renderChrome() {
   el.translate.disabled = state.input.trim().length === 0 || loading || ocrBusy
   el.translate.textContent = loading ? '翻译中…' : '翻译'
   el.clear.disabled = (state.input.length === 0 && state.image === null) || ocrBusy
+  el['pick-image'].hidden = !usesDeepSeekEndpoint()
   el['pick-image'].disabled = ocrBusy || loading
   el['image-refresh'].hidden = !state.ocrDone
   el['image-refresh'].disabled = ocrBusy || loading
@@ -1048,6 +1063,10 @@ function bind() {
         const file = item.getAsFile()
         if (file !== null) {
           event.preventDefault()
+          if (!usesDeepSeekEndpoint()) {
+            ocrFail(OCR_UNSUPPORTED)
+            return
+          }
           void handleImageFile(file, 'paste')
           return
         }
@@ -1264,6 +1283,8 @@ function bind() {
     const base = el['base-url'].value.trim()
     config.baseURL = base.length > 0 ? base : DEFAULT_BASE_URL
     saveSettings()
+    // 换成不支持 OCR 的地址时，把已经选的图片也清掉
+    if (!usesDeepSeekEndpoint() && state.image !== null) clearImage()
     renderChrome()
     void refreshModels()
     void refreshBalance()
@@ -1540,6 +1561,10 @@ function dataUrlMime(dataUrl) {
 
 /** 对给定图片跑一次 OCR，把结果写进输入框 */
 async function runOcr(dataUrl, name, mime) {
+  if (!usesDeepSeekEndpoint()) {
+    ocrFail(OCR_UNSUPPORTED)
+    return
+  }
   if (config.apiKey.length === 0) {
     ocrFail('请先在「设置」里填写 API Key。')
     return
@@ -1600,6 +1625,10 @@ function refreshOcr() {
 async function handleImageFile(file, source = 'file') {
   if (file === null || file === undefined) return
 
+  if (!usesDeepSeekEndpoint()) {
+    ocrFail(OCR_UNSUPPORTED)
+    return
+  }
   if (!String(file.type || '').startsWith('image/')) {
     ocrFail('这不是图片文件，请选 PNG / JPEG / WebP 等图片。')
     return
