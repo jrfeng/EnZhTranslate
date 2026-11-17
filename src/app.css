@@ -1487,10 +1487,11 @@ html[data-theme='c'] .progress-line-runner {
   align-items: flex-start;
   gap: 10px;
   padding: 10px 12px;
+  /* 结构跟随主题：描边粗细、圆角、底色、投影都由 --app-* 决定 */
   border: var(--app-line) solid var(--app-border);
-  border-radius: 10px;
+  border-radius: var(--app-radius);
   background: var(--app-panel);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--app-shadow);
   font-size: var(--wa-font-size-xs);
   line-height: 1.5;
   color: var(--app-text);
@@ -1498,13 +1499,37 @@ html[data-theme='c'] .progress-line-runner {
   animation: toast-in 0.18s ease-out;
 }
 
-.toast-error {
-  border-color: var(--wa-color-danger-fill-loud, #c2261a);
+/* 悬浮元素需要比卡片更明显的投影；c / d 用主题自带的硬投影 */
+html[data-theme='a'] .toast {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
 }
 
-/* 提醒类提示（不是错误）：琥珀色描边 */
-.toast-warn {
-  border-color: #d98a1f;
+html[data-theme='b'] .toast {
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+}
+
+/* 提示类型只由左侧色条表达，颜色取自主题，避免出现主题外的色块 */
+.toast::before {
+  content: '';
+  flex: 0 0 auto;
+  align-self: stretch;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--app-muted);
+}
+
+.toast-warn::before {
+  background: var(--app-accent);
+}
+
+.toast-error::before {
+  background: var(--wa-color-danger-fill-loud, #c2261a);
+}
+
+html[data-theme='c'] .toast::before,
+html[data-theme='d'] .toast::before {
+  width: 6px;
+  border-radius: 0;
 }
 
 .toast-text {

@@ -934,6 +934,8 @@ async function run() {
     renderChrome()
     el['settings-hint'].textContent = '请先填写 API Key，再翻译。'
     el['api-key'].focus()
+    // 设置面板可能被折叠或滚出视野，再补一条 Toast，避免用户以为按钮没反应
+    showToast('未提供 API Key，请提供后再翻译。', 'warn')
     return
   }
 
