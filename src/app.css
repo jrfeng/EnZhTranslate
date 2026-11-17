@@ -715,9 +715,10 @@ html[data-theme='b'] .verify-dialog {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border: 0;
+  /* 图片区做成一块「内嵌的屏幕」：底色比弹窗深一档 + 主题描边 */
+  border: var(--app-line) solid var(--app-border);
   border-radius: var(--app-radius-sm);
-  background: var(--app-panel-2);
+  background: var(--app-bg);
   cursor: grab;
   user-select: none;
   -webkit-user-select: none;
@@ -783,9 +784,10 @@ html[data-theme='b'] .verify-dialog {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  /* 文本区和弹窗同底色，靠上方留白与图片区分开，不再用色块切割 */
   border: 0;
   border-radius: var(--app-radius-sm);
-  background: var(--app-panel);
+  background: transparent;
 }
 
 .verify-head {
