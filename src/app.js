@@ -74,6 +74,7 @@ const THEMES = [
   { id: 'b', name: '浅色' },
   { id: 'a', name: '深色' },
   { id: 'c', name: '风格化' },
+  { id: 'd', name: '蓝色大肥鱼' },
 ]
 
 const config = { apiKey: '', baseURL: DEFAULT_BASE_URL, model: DEFAULT_MODEL }
@@ -613,8 +614,7 @@ function isStale() {
   )
 }
 
-function renderChrome() {
-  const loading = state.phase === 'loading'
+function renderChrome() {  const loading = state.phase === 'loading'
   const ocrBusy = state.ocrBusy
 
   el.translate.disabled = state.input.trim().length === 0 || loading || ocrBusy
@@ -678,6 +678,8 @@ function renderOutput() {
   state.outputKey = key
 
   const out = el.output
+  out.classList.remove('is-empty')
+  out.classList.remove('has-text')
 
   if (state.phase === 'error') {
     out.classList.remove('md-mode')
@@ -697,6 +699,7 @@ function renderOutput() {
 
   if (state.output.length === 0) {
     out.classList.remove('md-mode')
+    out.classList.add('is-empty')
     const span = document.createElement('span')
     span.className = 'placeholder'
     span.textContent = state.phase === 'loading' ? '翻译中…' : '译文会显示在这里。'
@@ -706,6 +709,7 @@ function renderOutput() {
 
   if (state.view === 'source') {
     out.classList.remove('md-mode')
+    out.classList.add('has-text')
     const source = document.createElement('div')
     source.className = 'md-source'
     // 复用输入框的高亮器：输出是 HTML 片段，highlightSource 内部会转义
@@ -715,6 +719,7 @@ function renderOutput() {
   }
 
   out.classList.add('md-mode')
+  out.classList.add('has-text')
   out.innerHTML = '<div class="md">' + renderMarkdown(state.output) + '</div>'
 }
 
@@ -1696,10 +1701,10 @@ function bindWindowControls() {
 
 const DARK_QUERY = window.matchMedia('(prefers-color-scheme: dark)')
 
-/** 把主题 id 解析成实际生效的 a / b / c（auto 跟随系统深浅色） */
+/** 把主题 id 解析成实际生效的 a / b / c / d（auto 跟随系统深浅色） */
 function resolveTheme(theme) {
   if (theme === 'auto') return DARK_QUERY.matches ? 'a' : 'b'
-  return theme === 'a' || theme === 'b' || theme === 'c' ? theme : 'b'
+  return THEMES.some((item) => item.id === theme) ? theme : 'b'
 }
 
 /** 应用主题：切换 html 上的 data-theme，并同步 Web Awesome 的深色类 */

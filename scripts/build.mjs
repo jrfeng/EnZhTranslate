@@ -25,6 +25,9 @@ for (const file of ['index.html', 'app.css']) {
   await copyFile(join(src, file), join(out, file))
 }
 
+// 静态图片资源（空译文区的水印等）
+await cp(join(src, 'assets'), join(out, 'assets'), { recursive: true })
+
 // Web Awesome 的主题 CSS 带相对 @import，整目录拷过去保持结构
 await cp(join(root, 'node_modules/@awesome.me/webawesome/dist/styles'), join(out, 'styles'), {
   recursive: true,

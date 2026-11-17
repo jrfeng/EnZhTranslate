@@ -11,7 +11,7 @@
       ;(function () {
         try {
           var saved = localStorage.getItem('enzh-app.theme')
-          var id = saved === 'a' || saved === 'b' || saved === 'c' ? saved : null
+          var id = saved === 'a' || saved === 'b' || saved === 'c' || saved === 'd' ? saved : null
           if (!id) id = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'a' : 'b'
           document.documentElement.dataset.theme = id
           if (id === 'a') document.documentElement.classList.add('wa-dark')

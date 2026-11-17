@@ -125,6 +125,163 @@ html[data-theme='c'] wa-select::part(combobox) {
   border-radius: 6px;
 }
 
+/* ======================= 主题 D · 蓝色大肥鱼（像素风） ===================== */
+/* 取自角色配色（藏青裙装 / 亮蓝头发 / 白围裙），整体做成 8bit 像素风：
+   直角、2px 描边、硬投影、点阵背景，标题栏和空译文区放像素鲸鱼 */
+
+html[data-theme='d'] {
+  color-scheme: light;
+
+  --app-bg: #dce9fb;
+  --app-top: #b7d3f5;
+  --app-panel: #ffffff;
+  --app-panel-2: #e8f1fe;
+  --app-border: #1b2a4a;
+  --app-border-strong: #1b2a4a;
+  --app-text: #12203a;
+  --app-muted: #44648c;
+  --app-accent: #3d7ce0;
+  --app-accent-on: #ffffff;
+  --app-accent-soft: #cfe4ff;
+  --app-token-bg: #ffffff;
+  --app-token-border: #1b2a4a;
+  --app-radius: 0px;
+  --app-radius-sm: 0px;
+  --app-line: 2px;
+  --app-shadow: 4px 4px 0 #1b2a4a;
+  --app-label-weight: 800;
+
+  --wa-color-brand-fill-loud: #3d7ce0;
+  --wa-color-brand-border-loud: #1b2a4a;
+  --wa-color-brand-on-loud: #ffffff;
+  --wa-color-focus: #3d7ce0;
+  --wa-color-text-link: #245a9e;
+  --wa-border-radius-scale: 0;
+
+  /* 像素鲸鱼：12×9 网格，crispEdges 保证放大也不糊边 */
+  --app-pixel-whale: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 9' shape-rendering='crispEdges'><g fill='%231b2a4a'><rect x='4' y='2' width='6' height='1'/><rect x='3' y='3' width='8' height='4'/><rect x='4' y='7' width='6' height='1'/><rect x='0' y='2' width='2' height='1'/><rect x='1' y='3' width='2' height='3'/><rect x='0' y='6' width='2' height='1'/><rect x='6' y='7' width='2' height='1'/></g><rect x='9' y='4' width='1' height='1' fill='%23ffffff'/><rect x='5' y='1' width='3' height='1' fill='%233d7ce0'/><rect x='6' y='0' width='1' height='1' fill='%233d7ce0'/></svg>");
+}
+
+/* 点阵背景，像老游戏的抖动纹理 */
+html[data-theme='d'] body {
+  background-color: #dce9fb;
+  background-image:
+    radial-gradient(#b9d2f2 1px, transparent 1px),
+    radial-gradient(#b9d2f2 1px, transparent 1px);
+  background-size: 8px 8px, 8px 8px;
+  background-position: 0 0, 4px 4px;
+}
+
+/* 标题栏：原来的圆点换成像素鲸鱼，标题后面跟一串像素气泡 */
+html[data-theme='d'] .brand-dot {
+  width: 26px;
+  height: 19px;
+  border-radius: 0;
+  background: var(--app-pixel-whale) center / contain no-repeat;
+  image-rendering: pixelated;
+}
+
+html[data-theme='d'] .titlebar-title::after {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 8px;
+  background: #3d7ce0;
+  box-shadow: 7px -7px 0 0 #7fb0ea, 14px -14px 0 0 #c2dcf8;
+  vertical-align: middle;
+}
+
+/* 组件统一直角 + 硬边 */
+html[data-theme='d'] wa-button::part(button) {
+  border: 2px solid #1b2a4a;
+  border-radius: 0;
+  box-shadow: 2px 2px 0 #1b2a4a;
+  font-weight: 700;
+}
+
+html[data-theme='d'] wa-input::part(input-wrapper),
+html[data-theme='d'] wa-select::part(combobox) {
+  border: 2px solid #1b2a4a;
+  border-radius: 0;
+}
+
+html[data-theme='d'] wa-tag::part(base) {
+  border: 2px solid #1b2a4a;
+  border-radius: 0;
+}
+
+/* 代码块也套上像素框 */
+html[data-theme='d'] .md pre {
+  border: 2px solid #1b2a4a;
+  border-radius: 0;
+  background: #eef5ff;
+}
+
+html[data-theme='d'] .md code {
+  border: 1px solid #1b2a4a;
+  border-radius: 0;
+  background: #e8f1fe;
+}
+
+html[data-theme='d'] .md pre code {
+  border: 0;
+  background: transparent;
+}
+
+/* 空译文区：用水印插画当背景，文字浮在上面 */
+html[data-theme='d'] .output.is-empty {
+  position: relative;
+  isolation: isolate;
+}
+
+html[data-theme='d'] .output.is-empty::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: url('/assets/empty-watermark.webp') center / 58% auto no-repeat;
+  opacity: 0.16;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(closest-side, #000 52%, transparent 82%);
+  mask-image: radial-gradient(closest-side, #000 52%, transparent 82%);
+}
+
+/* 翻译完成后：右下角一枚淡水印，正文压在上面 */
+html[data-theme='d'] .output.has-text {
+  position: relative;
+  isolation: isolate;
+}
+
+html[data-theme='d'] .output.has-text::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: url('/assets/output-watermark.webp') center / 58% auto no-repeat;
+  opacity: 0.17;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(closest-side, #000 52%, transparent 88%);
+  mask-image: radial-gradient(closest-side, #000 52%, transparent 88%);
+}
+
+/* 列表符号也换成方形像素点 */
+html[data-theme='d'] .md li::marker {
+  color: #3d7ce0;
+}
+
+/* 每张卡片的标题前放一颗 2×2 像素像素块，统一的小装饰 */
+html[data-theme='d'] .card-title::before {
+  content: '';
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 7px;
+  background: #3d7ce0;
+  box-shadow: 7px 0 0 0 #1b2a4a, 0 7px 0 0 #1b2a4a, 7px 7px 0 0 #9ec6f2;
+  vertical-align: 1px;
+}
+
 /* ---------------------------------------------------------------- 基础 */
 
 * {

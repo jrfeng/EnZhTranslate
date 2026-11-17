@@ -32,6 +32,10 @@
 
 ![风格化主题](docs/screenshots/theme-bold.png)
 
+**蓝色大肥鱼**（像素风、直角硬边、点阵背景、手绘像素鲸鱼与插画水印）
+
+![蓝色大肥鱼主题](docs/screenshots/theme-whale.png)
+
 > 截图使用模拟数据展示界面，不代表真实接口返回。
 
 ---
@@ -60,7 +64,7 @@
 
 ### 界面
 
-- 三套内置主题：浅色、深色、风格化，另有「跟随系统」实时跟随系统深浅色
+- 四套内置主题：浅色、深色、风格化、蓝色大肥鱼（像素风），另有「跟随系统」实时跟随系统深浅色
 - 自定义无边框窗口与标题栏，与主题配色统一
 - 输出区顶部有细扫光进度指示，替代传统进度条
 - 未配置 API Key 时，「设置」按钮显示小红点提示
@@ -282,7 +286,16 @@ Rust 命令层（translate / models / balance / ocr）
 
 界面组件基于 Web Awesome（`wa-button` / `wa-input` / `wa-select` / `wa-dialog` / `wa-tag`），其余视觉元素（输入高亮、卡片、开关胶囊、进度扫光、校验弹窗）均为手写 CSS。
 
-三套主题在 `src/app.css` 顶部各定义一组 `--app-*` 变量（底色、面板、边框、强调色、圆角、描边宽度、阴影、字重），配合覆盖 Web Awesome 的 `--wa-*` 令牌即可整体换肤。「跟随系统」读取 `prefers-color-scheme`，在浅色与深色之间切换。
+四套主题在 `src/app.css` 顶部各定义一组 `--app-*` 变量（底色、面板、边框、强调色、圆角、描边宽度、阴影、字重），配合覆盖 Web Awesome 的 `--wa-*` 令牌即可整体换肤。「跟随系统」读取 `prefers-color-scheme`，在浅色与深色之间切换。
+
+| 主题 | 特征 |
+|---|---|
+| 浅色 | 发丝线、系统蓝、极淡阴影 |
+| 深色 | 近黑底、紫色强调 |
+| 风格化 | 米白底、2px 黑描边、3px 硬阴影、黄色顶栏 |
+| 蓝色大肥鱼 | 像素风：直角、2px 藏青描边、硬投影、点阵背景、像素鲸鱼与插画水印 |
+
+「蓝色大肥鱼」的插画资源放在 `src/assets/`（WebP，共约 90 KB），由 `build.mjs` 拷贝到 `dist/assets/`；译文为空时显示抱鲸鱼水印，翻译完成后换成欢呼水印。
 
 ### 项目结构
 
@@ -292,6 +305,7 @@ src/                     前端源码
   app.css                主题变量 + 布局 + Markdown 样式
   app.js                 业务逻辑与渲染
   main.js                注册 Web Awesome 组件后引入 app.js
+  assets/                主题插画（WebP 水印）
 scripts/build.mjs        esbuild 打包，拷贝 html/css/主题样式到 dist/
 dist/                    前端构建产物（git 忽略，编译进 exe）
 build/                   各平台成品：安装包 / deb / AppImage / dmg（git 忽略）
