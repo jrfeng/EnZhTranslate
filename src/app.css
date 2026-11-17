@@ -654,12 +654,12 @@ html[data-theme='c'] .win-btn-close:hover {
 
 .verify-dialog {
   position: relative;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
   gap: 10px;
-  width: min(1060px, 100%);
-  height: min(780px, 100%);
-  padding: 12px;
+  width: min(1240px, 100%);
+  height: min(720px, 100%);
+  padding: 10px;
   /* 和「清空术语」对话框同一套语言：面板底色 + 主题描边/圆角 + 主题投影 */
   border: var(--app-line) solid var(--app-border);
   border-radius: var(--app-radius);
@@ -675,12 +675,8 @@ html[data-theme='b'] .verify-dialog {
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.16);
 }
 
-/* 图片区右上角关闭按钮 */
-.verify-close-x {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 3;
+/* 右栏标题栏最右侧的关闭按钮 */
+.verify-head-close {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -692,25 +688,24 @@ html[data-theme='b'] .verify-dialog {
   background: var(--app-panel);
   color: var(--app-muted);
   cursor: pointer;
-  opacity: 0.92;
   transition: background 0.12s ease, color 0.12s ease;
 }
 
-.verify-close-x svg {
+.verify-head-close svg {
   fill: none;
   stroke: currentColor;
   stroke-width: 1.2;
 }
 
-.verify-close-x:hover {
+.verify-head-close:hover {
   background: var(--wa-color-danger-fill-loud, #c2261a);
   color: #ffffff;
 }
 
 .verify-stage {
   position: relative;
-  flex: 1 1 auto;
   min-height: 0;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -719,6 +714,7 @@ html[data-theme='b'] .verify-dialog {
   border: var(--app-line) solid var(--app-border);
   border-radius: var(--app-radius-sm);
   background: var(--app-bg);
+  padding: 8px;
   cursor: grab;
   user-select: none;
   -webkit-user-select: none;
@@ -778,16 +774,15 @@ html[data-theme='b'] .verify-dialog {
 }
 
 .verify-panel {
-  flex: 0 0 auto;
-  height: 38%;
-  min-height: 150px;
+  min-height: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  /* 文本区和弹窗同底色，靠上方留白与图片区分开，不再用色块切割 */
-  border: 0;
+  /* 右栏也是一块卡片，和左边的「屏幕」对称 */
+  border: var(--app-line) solid var(--app-border);
   border-radius: var(--app-radius-sm);
-  background: transparent;
+  background: var(--app-panel);
 }
 
 .verify-head {
@@ -796,7 +791,7 @@ html[data-theme='b'] .verify-dialog {
   gap: 8px;
   flex: 0 0 auto;
   min-height: 40px;
-  padding: 6px 8px 2px 14px;
+  padding: 10px 12px 8px;
   border-bottom: 0;
   background: transparent;
   font-size: var(--wa-font-size-xs);
@@ -849,7 +844,7 @@ html[data-theme='b'] .verify-dialog {
   min-height: 0;
   width: 100%;
   margin: 0;
-  padding: 12px 14px;
+  padding: 0 12px 10px;
   border: 0;
   outline: none;
   resize: none;
@@ -869,7 +864,7 @@ html[data-theme='b'] .verify-dialog {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  padding: 12px 14px;
+  padding: 0 12px 10px;
   font-size: var(--wa-font-size-s);
   line-height: 1.6;
 }
@@ -879,7 +874,7 @@ html[data-theme='b'] .verify-dialog {
   align-items: center;
   gap: 8px;
   flex: 0 0 auto;
-  padding: 6px 12px 10px;
+  padding: 8px 12px 12px;
   border-top: 0;
   background: transparent;
   font-size: var(--wa-font-size-xs);
