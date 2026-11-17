@@ -4,6 +4,12 @@
 ![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 ![stack](https://img.shields.io/badge/Tauri%202-Rust%20%2B%20Web%20Awesome-informational)
 ![license](https://img.shields.io/badge/license-MIT-green)
+![ai-built](https://img.shields.io/badge/built%20with-DeepSeek%20Harness-4D6BFE)
+
+> **本项目完全由 AI 编码完成。**
+>
+> 代码、界面、图标、构建脚本、CI 流水线与文档，全部在 [DeepSeek Harness](https://deepseek-harness.github.io/deepseek-harness/en/guide/quickstart) 的会话中由 AI 代理生成与迭代，没有手写代码。
+> 人类负责提出需求、挑选设计、决定发布节奏，并对每个版本做实际运行验收。
 
 一款面向开发者的英文转中文翻译工具。针对技术文本做了结构整理：把原文重排为 Markdown 再翻译，保留代码、命令、路径等术语的原始形态，输出可直接粘贴进文档。
 
@@ -305,6 +311,26 @@ debug/                   测试与诊断脚本
   cargo-run.cmd          cargo run，保留控制台看 panic
 .github/workflows/       三平台 CI（tag 触发草稿 Release）
 ```
+
+---
+
+## 开发方式
+
+这是一个 **AI 编码项目**：从第一行代码到发布产物，全部在 [DeepSeek Harness](https://deepseek-harness.github.io/deepseek-harness/en/guide/quickstart) 的会话中由 AI 代理完成，没有手写代码。
+
+| 环节 | 承担者 |
+|---|---|
+| 需求定义、视觉选型、发布决策 | 人类 |
+| 架构设计、Rust 命令实现、前端界面、图标生成、构建脚本、CI、文档 | AI（DeepSeek Harness） |
+| 运行验证与验收 | 人类实操 + AI 用 headless 浏览器 / WSL 自动化自检 |
+
+开发以「提出需求 → AI 改代码 → 本地测试版验证 → 反馈修正 → 提交」循环推进。仓库里的这些痕迹都是该流程的产物：
+
+- `debug/` —— 先出测试版再出正式版的验证脚本
+- `temp/` —— 截图与行为测试用的临时脚本（已 git 忽略）
+- `.github/workflows/build.yml` —— 三平台可复现构建
+
+对话记录不随仓库分发，但代码风格、提交信息与这套工具链均由该过程形成。
 
 ---
 
