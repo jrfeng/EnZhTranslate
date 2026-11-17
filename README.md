@@ -251,18 +251,18 @@ fc-cache -f
 
 ### 持续集成
 
-`.github/workflows/build.yml` 提供三平台自动构建：
+`.github/workflows/build.yml` 提供自动构建：
 
 | 平台 | Runner | 产物 |
 |---|---|---|
 | Windows | `windows-latest` | NSIS 安装包 |
-| macOS | `macos-latest` | 通用 `.dmg`（Intel + Apple Silicon） |
-| Linux | `ubuntu-22.04` | `.deb` + `.AppImage` |
+| macOS（Apple Silicon） | `macos-14` | 原生 arm64 `.dmg` |
 
 - 推送 `v*` tag 时自动构建，并把产物挂到一个**草稿 Release** 上，人工确认后再发布
 - 也可在 Actions 页面手动触发（`workflow_dispatch`），此时产物作为 workflow artifact 上传
 - 使用 `GITHUB_TOKEN`，无需额外 secret；未配置代码签名，产物与本地构建一样需要用户手动放行
-- 私有仓库会消耗 Actions 分钟数（Linux 1×、Windows 2×、macOS 10×）
+- 私有仓库会消耗 Actions 分钟数（Windows 2×、macOS 10×）
+- Linux 构建暂未接入 CI，需要时用 `build-linux.sh` 在本地出 `.deb` / `.AppImage`（workflow 里保留了注释掉的 job，可直接恢复）
 
 ---
 
