@@ -240,6 +240,20 @@ body {
   color: #ffffff;
 }
 
+/* macOS：窗口用系统红绿灯，隐藏自绘按钮并为红绿灯留出位置 */
+html[data-platform='mac'] .titlebar {
+  padding-left: 82px;
+}
+
+html[data-platform='mac'] .win-controls {
+  display: none;
+}
+
+html[data-platform='mac'] .win-btn-close:hover {
+  background: transparent;
+  color: var(--app-muted);
+}
+
 html[data-theme='c'] .brand-dot {
   width: 10px;
   height: 10px;

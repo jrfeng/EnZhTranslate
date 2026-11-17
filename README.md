@@ -147,6 +147,8 @@ chmod +x build-macos.sh
 
 产物位于 `src-tauri/target/release/bundle/macos/` 与 `.../dmg/`（`.dmg` 会复制一份到 `build/`）。macOS 专属打包配置在 `src-tauri/tauri.macos.conf.json`，Tauri 仅在 macOS 构建时合并。
 
+窗口外观按平台区分：macOS 保留**系统原生红绿灯**（配置为 `decorations: true` + `titleBarStyle: "Overlay"` + `hiddenTitle`，标题栏透明、内容延伸到顶部），Windows / Linux 使用无边框窗口加自绘标题栏。前端通过 `html[data-platform]` 切换对应布局。
+
 未签名应用首次打开会被 Gatekeeper 拦截：右键 →「打开」，或执行
 
 ```bash
