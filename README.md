@@ -1,6 +1,6 @@
 # Fish翻译
 
-![version](https://img.shields.io/badge/version-0.7.0-blue)
+![version](https://img.shields.io/badge/version-0.7.1-blue)
 ![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 ![stack](https://img.shields.io/badge/Tauri%202-Rust%20%2B%20Web%20Awesome-informational)
 ![license](https://img.shields.io/badge/license-MIT-green)
@@ -366,6 +366,14 @@ debug/                   测试与诊断脚本
 ---
 
 ## 更新日志
+
+### 0.7.1
+
+- **应用名统一**：安装后 Windows 快捷方式 / 应用列表、macOS `.app` 与菜单栏、Linux 应用菜单都显示「Fish翻译」（可执行文件与包名仍是 `fish-translate`）
+- **新图标**：深色圆角底 + 蓝白双气泡（A / 中），替换掉原来的英中气泡旧图
+- **启动不再跳动**：组件升级完成前不绘制界面，避免工具栏先按错误宽度排一次；同时禁用根滚动条
+- **数据缓存**：模型列表与余额成功读取后缓存，下次启动先用缓存把界面填满，再静默更新
+- **余额刷新**：已有数值时刷新保持原数字，只显示扫光进度，不再闪成「余额 --」
 
 ### 0.7.0
 
