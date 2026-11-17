@@ -232,6 +232,21 @@ fc-cache -f
 
 测试版与正式版共用同一个单实例锁，切换前请先关闭另一个。
 
+### 持续集成
+
+`.github/workflows/build.yml` 提供三平台自动构建：
+
+| 平台 | Runner | 产物 |
+|---|---|---|
+| Windows | `windows-latest` | NSIS 安装包 |
+| macOS | `macos-latest` | 通用 `.dmg`（Intel + Apple Silicon） |
+| Linux | `ubuntu-22.04` | `.deb` + `.AppImage` |
+
+- 推送 `v*` tag 时自动构建，并把产物挂到一个**草稿 Release** 上，人工确认后再发布
+- 也可在 Actions 页面手动触发（`workflow_dispatch`），此时产物作为 workflow artifact 上传
+- 使用 `GITHUB_TOKEN`，无需额外 secret；未配置代码签名，产物与本地构建一样需要用户手动放行
+- 私有仓库会消耗 Actions 分钟数（Linux 1×、Windows 2×、macOS 10×）
+
 ---
 
 ## 技术说明
@@ -288,6 +303,7 @@ debug/                   测试与诊断脚本
   run-linux-debug.cmd    经 WSL 启动 Linux debug 版
   diagnose.cmd           直接运行 debug exe 并打印退出码 / panic 日志
   cargo-run.cmd          cargo run，保留控制台看 panic
+.github/workflows/       三平台 CI（tag 触发草稿 Release）
 ```
 
 ---
