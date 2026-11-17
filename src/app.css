@@ -247,24 +247,6 @@ html[data-theme='d'] .output.is-empty::before {
   mask-image: radial-gradient(closest-side, #000 52%, transparent 82%);
 }
 
-/* 翻译完成后：右下角一枚淡水印，正文压在上面 */
-html[data-theme='d'] .output.has-text {
-  position: relative;
-  isolation: isolate;
-}
-
-html[data-theme='d'] .output.has-text::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: url('/assets/output-watermark.webp') center / 58% auto no-repeat;
-  opacity: 0.17;
-  pointer-events: none;
-  -webkit-mask-image: radial-gradient(closest-side, #000 52%, transparent 88%);
-  mask-image: radial-gradient(closest-side, #000 52%, transparent 88%);
-}
-
 /* 列表符号也换成方形像素点 */
 html[data-theme='d'] .md li::marker {
   color: #3d7ce0;

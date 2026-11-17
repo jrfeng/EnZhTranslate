@@ -295,7 +295,7 @@ Rust 命令层（translate / models / balance / ocr）
 | 风格化 | 米白底、2px 黑描边、3px 硬阴影、黄色顶栏 |
 | 蓝色大肥鱼 | 像素风：直角、2px 藏青描边、硬投影、点阵背景、像素鲸鱼与插画水印 |
 
-「蓝色大肥鱼」的插画资源放在 `src/assets/`（WebP，共约 90 KB），由 `build.mjs` 拷贝到 `dist/assets/`；译文为空时显示抱鲸鱼水印，翻译完成后换成欢呼水印。
+「蓝色大肥鱼」的插画资源放在 `src/assets/`（WebP），由 `build.mjs` 拷贝到 `dist/assets/`；译文为空时显示抱鲸鱼水印，有译文时只保留纯文字，避免干扰阅读。
 
 ### 项目结构
 

@@ -679,7 +679,6 @@ function renderOutput() {
 
   const out = el.output
   out.classList.remove('is-empty')
-  out.classList.remove('has-text')
 
   if (state.phase === 'error') {
     out.classList.remove('md-mode')
@@ -709,7 +708,6 @@ function renderOutput() {
 
   if (state.view === 'source') {
     out.classList.remove('md-mode')
-    out.classList.add('has-text')
     const source = document.createElement('div')
     source.className = 'md-source'
     // 复用输入框的高亮器：输出是 HTML 片段，highlightSource 内部会转义
@@ -719,7 +717,6 @@ function renderOutput() {
   }
 
   out.classList.add('md-mode')
-  out.classList.add('has-text')
   out.innerHTML = '<div class="md">' + renderMarkdown(state.output) + '</div>'
 }
 
