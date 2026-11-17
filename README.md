@@ -20,7 +20,7 @@
 
 翻译、图片识别、余额查询全部在本机发起，API Key 只保存在本机，不经过任何中间服务器。
 
-> 命名：界面显示名为 **Fish翻译**；安装包、二进制、包名等英文场景统一用 **FishTranslate**。
+> 命名：安装后的应用名统一为 **Fish翻译**（Windows 快捷方式与应用列表、macOS `.app` 与菜单栏、Linux 应用菜单）。可执行文件与包名保持英文：`fish-translate`、`com.local.fish.translate`。
 
 ---
 
@@ -165,7 +165,7 @@ chmod +x build-macos.sh
 未签名应用首次打开会被 Gatekeeper 拦截：右键 →「打开」，或执行
 
 ```bash
-xattr -dr com.apple.quarantine /Applications/FishTranslate.app
+xattr -dr com.apple.quarantine "/Applications/Fish翻译.app"
 ```
 
 ### Linux
@@ -208,8 +208,8 @@ chmod +x build-linux.sh
 
 | 产物 | 体积 | 说明 |
 |---|---|---|
-| `FishTranslate_<版本>_amd64.deb` | 约 2.9 MB | 依赖 `libwebkit2gtk-4.1-0`、`libgtk-3-0`，安装到 `/usr/bin/fish-translate` |
-| `FishTranslate_<版本>_amd64.AppImage` | 约 80 MB | 内置 WebKitGTK 运行时，免安装，体积大是正常的 |
+| `Fish翻译_<版本>_amd64.deb` | 约 2.9 MB | 依赖 `libwebkit2gtk-4.1-0`、`libgtk-3-0`，安装到 `/usr/bin/fish-translate`；deb 包名仍是 `fish-translate` |
+| `Fish翻译_<版本>_amd64.AppImage` | 约 80 MB | 内置 WebKitGTK 运行时，免安装，体积大是正常的 |
 
 ```bash
 # 安装 deb
@@ -370,7 +370,7 @@ debug/                   测试与诊断脚本
 ### 0.7.0
 
 - **多语言**：新增原文 / 译文语言对选择（14 种语言），翻译提示词按语言对动态生成
-- **改名**：应用显示名改为 **Fish翻译**，英文场景统一为 **FishTranslate**（包名、二进制、标识符、安装包）
+- **改名**：应用名统一为 **Fish翻译**（Windows 快捷方式与应用列表、macOS `.app` 与菜单栏、Linux 应用菜单都显示中文）；可执行文件与包名保持英文 `fish-translate`
 - **新主题**：加入「蓝色大肥鱼」像素风主题，含像素鲸鱼标题图标与像素插画水印
 - **弹窗重做**：确认弹窗与校验弹窗的描边、圆角、投影、按钮全部改由主题令牌驱动
 - **余额**：点击刷新显示扫光进度（最短 1 秒），余额隐藏时左侧分隔线一起隐藏
@@ -393,7 +393,7 @@ Failed to setup app: runtime error: failed to create webview:
 WebView2 error: WindowsError(HRESULT(0x8000FFFF) "灾难性故障")
 ```
 
-将 exe 复制到工作区外（如 `%LOCALAPPDATA%\Programs\FishTranslate\`）即可正常运行。源码放在工作区内没有问题，仅运行位置受限。
+将 exe 复制到工作区外（如 `%LOCALAPPDATA%\Programs\Fish翻译\`）即可正常运行。源码放在工作区内没有问题，仅运行位置受限。
 
 **产物未做代码签名。** Windows 首次运行会触发 SmartScreen 提示，选择「更多信息 → 仍要运行」；macOS 首次打开需右键「打开」或执行 `xattr -dr com.apple.quarantine`。
 

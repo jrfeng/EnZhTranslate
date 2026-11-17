@@ -106,6 +106,6 @@ cat <<'TIP'
     （缺依赖时用 sudo apt -f install 补齐）
   · .AppImage 直接运行前需加可执行位：chmod +x *.AppImage
     若提示缺少 FUSE，可装 libfuse2，或改用：
-      ./FishTranslate_*.AppImage --appimage-extract-and-run
+      ./Fish翻译_*.AppImage --appimage-extract-and-run
   · 单实例依赖桌面会话的 DBus，在纯 SSH / 无桌面环境下可能不生效
 TIP

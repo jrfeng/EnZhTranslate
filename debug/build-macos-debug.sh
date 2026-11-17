@@ -39,7 +39,7 @@ npm run build
 say "构建 debug .app"
 npx tauri build --debug --bundles app
 
-APP="src-tauri/target/debug/bundle/macos/FishTranslate.app"
+APP="src-tauri/target/debug/bundle/macos/Fish翻译.app"
 [ -d "$APP" ] || fail "没找到产物：$APP"
 
 say "完成"
