@@ -6,10 +6,7 @@
 ![license](https://img.shields.io/badge/license-MIT-green)
 ![ai-built](https://img.shields.io/badge/built%20with-DeepSeek%20Harness-4D6BFE)
 
-> **一个个人用的小工具，顺手开源出来。**
->
-> 最初只为解决自己的翻译需求而写，功能按个人习惯裁剪：没有账号体系、没有云同步、不做团队协作。
-> 现在开放出来，有需要的朋友可以直接拿去用，也欢迎按自己的场景改。
+> **个人用小工具，需要者自取。**
 
 > **本项目完全由 AI 编码完成。**
 >
@@ -19,8 +16,6 @@
 一款面向开发者的多语言翻译工具，内置 14 种常用语言、可自由指定原文与译文语言。针对技术文本做了结构整理：把原文重排为 Markdown 再翻译，保留代码、命令、路径等术语的原始形态，输出可直接粘贴进文档。
 
 翻译、图片识别、余额查询全部在本机发起，API Key 只保存在本机，不经过任何中间服务器。
-
-> 命名：安装后的应用名统一为 **Fish翻译**（Windows 快捷方式与应用列表、macOS `.app` 与菜单栏、Linux 应用菜单）。可执行文件与包名保持英文：`fish-translate`、`com.local.fish.translate`。
 
 ---
 
@@ -107,8 +102,6 @@
 | 图片 OCR | `POST /v1/tools/ocr` | DeepSeek 专有，`multipart/form-data`，按页计费 |
 
 **接口地址不是 DeepSeek 官方域名时，图片翻译与余额显示会整体关闭**（图片按钮隐藏、粘贴拦截、调用兜底、余额条隐藏），因为 OCR 与余额接口只在 DeepSeek 官方提供。翻译与模型列表不受影响。
-
-余额低于 3 元显示橙色，低于 2 元显示红色。
 
 ---
 
@@ -268,11 +261,6 @@ fc-cache -f
 | macOS（通用） | `macos-latest` | Intel + Apple Silicon 通用 `.dmg` |
 | Linux | `ubuntu-22.04` | `.deb` 与 `.AppImage` |
 
-构建流程：先在各自 runner 上 `npx tauri build`，再把产物**复制成英文文件名**，最后汇总到一个 job 里创建**草稿 Release**，人工确认后再发布。
-
-> 为什么要改名：GitHub Release 会上传资源名中的中文抹掉（`Fish翻译_0.7.1_x64-setup.exe` 会变成 `Fish._0.7.1_x64-setup.exe`）。
-> 因此 Release 里的资源统一是 `FishTranslate_*`，**安装后的应用名仍由 `productName` 决定，显示「Fish翻译」**。
-
 - 推送 `v*` tag 时自动构建并创建草稿 Release
 - 也可在 Actions 页面手动触发（`workflow_dispatch`），此时产物只作为 workflow artifact 上传，不创建 Release
 - 使用 `GITHUB_TOKEN`，无需额外 secret；未配置代码签名，产物与本地构建一样需要用户手动放行
@@ -398,15 +386,6 @@ debug/                   测试与诊断脚本
 ---
 
 ## 注意事项
-
-**不要在 DSH 工作区目录内运行 exe。** 工作区目录的 ACL 被沙箱修改过，WebView2 在其中启动会崩溃：
-
-```
-Failed to setup app: runtime error: failed to create webview:
-WebView2 error: WindowsError(HRESULT(0x8000FFFF) "灾难性故障")
-```
-
-将 exe 复制到工作区外（如 `%LOCALAPPDATA%\Programs\Fish翻译\`）即可正常运行。源码放在工作区内没有问题，仅运行位置受限。
 
 **产物未做代码签名。** Windows 首次运行会触发 SmartScreen 提示，选择「更多信息 → 仍要运行」；macOS 首次打开需右键「打开」或执行 `xattr -dr com.apple.quarantine`。
 
