@@ -1061,6 +1061,13 @@ html[data-theme='c'] .term {
   white-space: normal;
 }
 
+/* 源码模式：复用输入框的 Markdown 高亮 */
+.output .md-source {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
 .placeholder {
   color: var(--app-muted);
 }

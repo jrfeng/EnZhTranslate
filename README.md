@@ -1,6 +1,6 @@
 # 英译中 · Tauri 桌面版
 
-版本 0.6.1 · 三套内置主题（Web Awesome）+ 图片 OCR 翻译。原生桌面版：前端静态页打进程序里，Rust 侧四个命令直接调模型接口，**运行时不需要 Node，也不需要开浏览器**。
+版本 0.6.2 · 三套内置主题（Web Awesome）+ 图片 OCR 翻译。原生桌面版：前端静态页打进程序里，Rust 侧四个命令直接调模型接口，**运行时不需要 Node，也不需要开浏览器**。
 
 ## 功能
 
@@ -38,7 +38,7 @@ WebView2 error: WindowsError(HRESULT(0x8000FFFF) "灾难性故障")
 | 产物 | 大小 | 适合 |
 |---|---|---|
 | `%LOCALAPPDATA%\Programs\EnZhTranslate\EnZhTranslate.exe` | 6.7 MB | 直接发 exe，对方双击即用（需要机器上已有 WebView2） |
-| `EnZhTranslate_0.6.1_x64-setup.exe` | 2.03 MB | 发安装包，自动检测/安装 WebView2，带开始菜单与卸载项 |
+| `EnZhTranslate_0.6.2_x64-setup.exe` | 2.03 MB | 发安装包，自动检测/安装 WebView2，带开始菜单与卸载项 |
 
 安装包由 `npx tauri build` 生成，位于 `src-tauri/target/release/bundle/nsis/`。
 

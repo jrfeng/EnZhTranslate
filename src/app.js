@@ -559,7 +559,9 @@ function loadPersisted() {
   state.autoCopy = readStore(KEYS.autoCopy) === '1'
   state.immediate = readStore(KEYS.immediate) === '1'
   state.termsOpen = readStore(KEYS.termsOpen) !== '0'
-  state.view = readStore(KEYS.view) === 'source' ? 'source' : 'preview'
+  // 译文视图不持久化：每次启动都是「预览」
+  state.view = 'preview'
+  removeStore(KEYS.view)
 
   const savedTheme = readStore(KEYS.theme)
   state.theme = THEMES.some((item) => item.id === savedTheme) ? savedTheme : 'auto'
@@ -687,9 +689,11 @@ function renderOutput() {
 
   if (state.view === 'source') {
     out.classList.remove('md-mode')
-    const plain = document.createElement('div')
-    plain.textContent = state.output
-    out.replaceChildren(plain)
+    const source = document.createElement('div')
+    source.className = 'md-source'
+    // 复用输入框的高亮器：输出是 HTML 片段，highlightSource 内部会转义
+    source.innerHTML = highlightSource(state.output)
+    out.replaceChildren(source)
     return
   }
 
@@ -1189,7 +1193,6 @@ function bind() {
 
   el['view-toggle'].addEventListener('click', () => {
     state.view = state.view === 'preview' ? 'source' : 'preview'
-    writeStore(KEYS.view, state.view)
     render()
   })
 
