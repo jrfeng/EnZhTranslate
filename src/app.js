@@ -41,6 +41,8 @@ const COPIED_MS = 1600
 /** 余额提醒阈值：低于该数值时变色（橙色 < 3，红色 < 2） */
 const BALANCE_WARN = 3
 const BALANCE_DANGER = 2
+/** 余额手动刷新的进度条最短显示时长 */
+const BALANCE_MIN_PROGRESS_MS = 1000
 
 const DEFAULT_BASE_URL = 'https://api.deepseek.com'
 const DEFAULT_MODEL = 'deepseek-chat'
@@ -148,6 +150,8 @@ const state = {
   theme: 'auto',
   /** 图片识别状态 */
   ocrBusy: false,
+  /** 用户点击余额手动刷新时显示进度条 */
+  balanceBusy: false,
   ocrMessage: '',
   ocrError: false,
   /** 这张图是否已经跑过一次 OCR（跑过才显示「刷新」按钮） */
@@ -169,6 +173,8 @@ for (const id of [
   'close-settings',
   'settings',
   'balance',
+  'balance-wrap',
+  'balance-progress',
   'balance-divider',
   'theme-select',
   'source-lang',
@@ -669,6 +675,7 @@ function renderChrome() {  const loading = state.phase === 'loading'
   el['pick-image'].disabled = ocrBusy || loading
   // 非 DeepSeek 地址没有余额接口
   if (!usesDeepSeekEndpoint()) setBalanceVisible(false)
+  el['balance-progress'].hidden = !state.balanceBusy
   el['image-refresh'].hidden = !state.ocrDone
   el['image-refresh'].disabled = ocrBusy || loading
   el['image-refresh'].classList.toggle('is-spinning', ocrBusy)
@@ -1030,51 +1037,70 @@ function addTerm() {
  * 查询并显示账户余额。DeepSeek 官方接口是 GET /user/balance；
  * 其它 OpenAI 兼容服务通常没有这个接口，失败时就隐藏，不打扰用户。
  */
-async function refreshBalance() {
-  // 余额接口只有 DeepSeek 官方提供，其它地址直接关掉
-  if (!usesDeepSeekEndpoint()) {
-    setBalanceVisible(false)
-    return
-  }
-  if (config.apiKey.length === 0) {
-    setBalanceVisible(false)
-    return
+async function refreshBalance(manual = false) {
+  // 用户主动点击余额时才显示进度条，自动刷新不打扰
+  const startedAt = Date.now()
+  if (manual) {
+    state.balanceBusy = true
+    renderChrome()
   }
 
-  const payload = await invokeTauri('balance', { apiKey: config.apiKey, baseURL: config.baseURL })
-  if (payload === null || payload === undefined || payload.ok !== true) {
-    setBalanceVisible(false)
-    return
-  }
-  if (typeof payload.total !== 'string' || payload.total.length === 0) {
-    setBalanceVisible(false)
-    return
-  }
+  try {
+    // 余额接口只有 DeepSeek 官方提供，其它地址直接关掉
+    if (!usesDeepSeekEndpoint()) {
+      setBalanceVisible(false)
+      return
+    }
+    if (config.apiKey.length === 0) {
+      setBalanceVisible(false)
+      return
+    }
 
-  const symbol =
-    payload.currency === 'USD' ? '$' : payload.currency === 'CNY' ? '¥' : String(payload.currency || '') + ' '
-  el.balance.textContent = '余额 ' + symbol + payload.total
-  el.balance.title =
-    '充值 ' + (payload.toppedUp || '0') + ' · 赠送 ' + (payload.granted || '0') + '（点击刷新）'
+    const payload = await invokeTauri('balance', { apiKey: config.apiKey, baseURL: config.baseURL })
+    if (payload === null || payload === undefined || payload.ok !== true) {
+      setBalanceVisible(false)
+      return
+    }
+    if (typeof payload.total !== 'string' || payload.total.length === 0) {
+      setBalanceVisible(false)
+      return
+    }
 
-  // 余额偏低时变色提醒：< 3 橙色，< 2 红色，不可用直接红色
-  const total = Number.parseFloat(payload.total)
-  const hasTotal = Number.isFinite(total)
-  el.balance.variant =
-    payload.available === false || (hasTotal && total < BALANCE_DANGER)
-      ? 'danger'
-      : hasTotal && total < BALANCE_WARN
-        ? 'warning'
-        : 'brand'
-  el.balance.hidden = false
-  if (el['balance-divider'] !== undefined && el['balance-divider'] !== null) {
-    el['balance-divider'].hidden = false
+    const symbol =
+      payload.currency === 'USD' ? '$' : payload.currency === 'CNY' ? '¥' : String(payload.currency || '') + ' '
+    el.balance.textContent = '余额 ' + symbol + payload.total
+    el.balance.title =
+      '充值 ' + (payload.toppedUp || '0') + ' · 赠送 ' + (payload.granted || '0') + '（点击刷新）'
+
+    // 余额偏低时变色提醒：< 3 橙色，< 2 红色，不可用直接红色
+    const total = Number.parseFloat(payload.total)
+    const hasTotal = Number.isFinite(total)
+    el.balance.variant =
+      payload.available === false || (hasTotal && total < BALANCE_DANGER)
+        ? 'danger'
+        : hasTotal && total < BALANCE_WARN
+          ? 'warning'
+          : 'brand'
+    setBalanceVisible(true)
+  } finally {
+    if (manual) {
+      // 请求太快时进度条一闪而过，补足到 1 秒再收起
+      const elapsed = Date.now() - startedAt
+      if (elapsed < BALANCE_MIN_PROGRESS_MS) {
+        await new Promise((resolve) => window.setTimeout(resolve, BALANCE_MIN_PROGRESS_MS - elapsed))
+      }
+      state.balanceBusy = false
+      renderChrome()
+    }
   }
 }
 
 /** 余额和它左边的分隔线一起显示 / 隐藏 */
 function setBalanceVisible(visible) {
-  el.balance.hidden = !visible
+  if (el['balance-wrap'] !== undefined && el['balance-wrap'] !== null) {
+    el['balance-wrap'].hidden = !visible
+  }
+  el.balance.hidden = false
   if (el['balance-divider'] !== undefined && el['balance-divider'] !== null) {
     el['balance-divider'].hidden = !visible
   }
@@ -1378,7 +1404,7 @@ function bind() {
     void refreshBalance()
   })
 
-  el['balance'].addEventListener('click', () => void refreshBalance())
+  el['balance'].addEventListener('click', () => void refreshBalance(true))
 
   el['theme-select'].addEventListener('change', () => {
     applyTheme(el['theme-select'].value)

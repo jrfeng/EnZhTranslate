@@ -68,7 +68,12 @@
               <span class="status-dot" id="settings-dot" hidden aria-hidden="true"></span>
             </span>
             <span class="toolbar-divider" id="balance-divider" hidden aria-hidden="true"></span>
-            <wa-tag id="balance" variant="brand" size="s" hidden>余额</wa-tag>
+            <span class="balance-wrap" id="balance-wrap" hidden>
+              <wa-tag id="balance" variant="brand" size="s">余额</wa-tag>
+              <span class="progress-line balance-progress" id="balance-progress" hidden>
+                <span class="progress-line-runner"></span>
+              </span>
+            </span>
           </div>
         </header>
 
@@ -192,8 +197,8 @@
     <wa-dialog id="confirm-modal" label="清空术语">
       <div>确定要清空全部已添加的术语吗？清空后无法恢复。</div>
       <div slot="footer" class="dialog-actions">
-        <wa-button id="confirm-cancel" appearance="plain" size="s">取消</wa-button>
-        <wa-button id="confirm-ok" variant="danger" size="s">清空</wa-button>
+        <wa-button id="confirm-cancel" appearance="plain">取消</wa-button>
+        <wa-button id="confirm-ok" variant="danger">清空</wa-button>
       </div>
     </wa-dialog>
 
