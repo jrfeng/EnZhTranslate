@@ -3,14 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>英译中</title>
+    <title>Fish翻译</title>
     <link rel="stylesheet" href="/styles/themes/default.css" />
     <link rel="stylesheet" href="/app.css" />
     <script>
       // 首屏前先把主题挂上，避免深色主题下闪一下白屏
       ;(function () {
         try {
-          var saved = localStorage.getItem('enzh-app.theme')
+          var saved = localStorage.getItem('fish-app.theme')
           var id = saved === 'a' || saved === 'b' || saved === 'c' || saved === 'd' ? saved : null
           if (!id) id = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'a' : 'b'
           document.documentElement.dataset.theme = id
@@ -34,7 +34,7 @@
     <div class="app">
       <div class="titlebar" data-tauri-drag-region>
         <span class="brand-dot" aria-hidden="true"></span>
-        <span class="titlebar-title" data-tauri-drag-region>英译中</span>
+        <span class="titlebar-title" data-tauri-drag-region>Fish翻译</span>
         <div class="win-controls">
           <button type="button" class="win-btn" id="win-min" title="最小化" aria-label="最小化">
             <svg viewBox="0 0 10 10" width="10" height="10" aria-hidden="true"><path d="M1 5h8" /></svg>
@@ -51,7 +51,13 @@
 
       <div class="workspace">
         <header class="head">
-          <span class="sub">在左侧输入英文，点「翻译」查看中文译文。</span>
+          <div class="lang-pair">
+            <span class="field-label">原文</span>
+            <wa-select id="source-lang" size="s" appearance="outlined" class="lang-select" title="选择原文语言"></wa-select>
+            <span class="lang-arrow" aria-hidden="true">→</span>
+            <span class="field-label">译文</span>
+            <wa-select id="target-lang" size="s" appearance="outlined" class="lang-select" title="选择译文语言"></wa-select>
+          </div>
           <div class="head-actions">
             <span class="field-label">模型</span>
             <wa-select id="model-select" size="s" appearance="outlined" class="model-select" title="选择翻译使用的模型"></wa-select>
@@ -84,9 +90,9 @@
           <section class="col">
             <section class="card card-grow">
               <div class="card-head">
-                <span class="card-title">英文原文</span>
+                <span class="card-title">原文</span>
                 <div class="card-meta">
-                  <button type="button" class="toggle" id="immediate" role="switch" aria-checked="false" title="开启后，粘贴英文即自动翻译">
+                  <button type="button" class="toggle" id="immediate" role="switch" aria-checked="false" title="开启后，粘贴文本即自动翻译">
                     <span class="toggle-dot" aria-hidden="true"></span>
                     <span class="toggle-text">粘贴后翻译</span>
                   </button>
@@ -119,7 +125,7 @@
                   class="input"
                   id="source"
                   spellcheck="false"
-                  placeholder="在这里输入或粘贴英文…"
+                  placeholder="在这里输入或粘贴要翻译的文本…"
                 ></textarea>
                 <wa-button id="pick-image" class="pick-image-fab" appearance="outlined" size="s" title="从本地选一张图片，识别文字后翻译" aria-label="从本地选一张图片">
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -161,7 +167,7 @@
           <section class="col">
             <section class="card card-grow">
               <div class="card-head">
-                <span class="card-title">中文译文</span>
+                <span class="card-title">译文</span>
                 <div class="card-meta">
                   <button type="button" class="toggle" id="auto-copy" role="switch" aria-checked="false" title="开启后，翻译完成自动复制译文">
                     <span class="toggle-dot" aria-hidden="true"></span>

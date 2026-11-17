@@ -41,12 +41,12 @@ if errorlevel 1 (
   exit /b 1
 )
 
-set "DEST=%LOCALAPPDATA%\Programs\EnZhTranslate"
+set "DEST=%LOCALAPPDATA%\Programs\FishTranslate"
 if not exist "%DEST%" mkdir "%DEST%"
-copy /y "target\release\en-zh-translate.exe" "%DEST%\EnZhTranslate.exe" >nul
+copy /y "target\release\fish-translate.exe" "%DEST%\FishTranslate.exe" >nul
 
 echo.
-echo   Installed: %DEST%\EnZhTranslate.exe
+echo   Installed: %DEST%\FishTranslate.exe
 echo.
 echo   IMPORTANT: run it from there, NOT from this workspace folder.
 echo   DSH sandbox ACLs on the workspace make WebView2 crash at startup.

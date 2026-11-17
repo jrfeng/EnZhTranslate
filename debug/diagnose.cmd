@@ -6,14 +6,14 @@ echo.
 echo   Running debug build (console stays open) ...
 echo.
 
-"%~dp0..\src-tauri\target\debug\en-zh-translate.exe"
+"%~dp0..\src-tauri\target\debug\fish-translate.exe"
 set "CODE=%ERRORLEVEL%"
 
 echo.
 echo   Exit code: %CODE%
-if exist "%TEMP%\enzh-translate-panic.log" (
+if exist "%TEMP%\fish-translate-panic.log" (
   echo   --- panic log ---
-  type "%TEMP%\enzh-translate-panic.log"
+  type "%TEMP%\fish-translate-panic.log"
   echo   -----------------
 )
 echo.

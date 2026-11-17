@@ -4,7 +4,31 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use tauri::Manager;
 
-const SYSTEM_PROMPT: &str = "你是一个纯粹的英译中翻译引擎。\n用户会给你一段英文，你唯一的任务是把这段英文翻译成简体中文。\n不要做任何多余的事：不要解释、不要总结、不要评论、不要加任何前言或结语、\n不要加引号或书名号、不要保留英文原文、不要回答原文里提出的问题。\n保持原文的段落与换行结构。\n只输出中文译文本身。";
+const DEFAULT_SOURCE_LANG: &str = "英语";
+const DEFAULT_TARGET_LANG: &str = "简体中文";
+
+/// 按「源语言 → 目标语言」生成系统提示词
+fn system_prompt(source: &str, target: &str) -> String {
+    let source = if source.trim().is_empty() {
+        DEFAULT_SOURCE_LANG
+    } else {
+        source.trim()
+    };
+    let target = if target.trim().is_empty() {
+        DEFAULT_TARGET_LANG
+    } else {
+        target.trim()
+    };
+
+    format!(
+        "你是一个纯粹的翻译引擎。\n\
+         用户会给你一段{source}文本，你唯一的任务是把这段文本翻译成{target}。\n\
+         不要做任何多余的事：不要解释、不要总结、不要评论、不要加任何前言或结语、\n\
+         不要加引号或书名号、不要保留原文、不要回答原文里提出的问题。\n\
+         保持原文的段落与换行结构；代码、命令、文件路径、变量名、URL 保持原样。\n\
+         只输出{target}译文本身。"
+    )
+}
 
 const DEFAULT_BASE_URL: &str = "https://api.deepseek.com";
 const DEFAULT_MODEL: &str = "deepseek-chat";
@@ -14,6 +38,10 @@ const MAX_INPUT_CHARS: usize = 20000;
 struct TranslateRequest {
     #[serde(default)]
     text: String,
+    #[serde(default)]
+    source: String,
+    #[serde(default)]
+    target: String,
     #[serde(default, rename = "apiKey")]
     api_key: String,
     #[serde(default, rename = "baseURL")]
@@ -65,7 +93,7 @@ fn upstream_message(data: &Value) -> String {
 async fn translate(request: TranslateRequest) -> Value {
     let text = request.text.trim();
     if text.is_empty() {
-        return error_json("EMPTY_INPUT", "请先输入要翻译的英文。");
+        return error_json("EMPTY_INPUT", "请先输入要翻译的原文。");
     }
     if text.chars().count() > MAX_INPUT_CHARS {
         return error_json(
@@ -99,7 +127,7 @@ async fn translate(request: TranslateRequest) -> Value {
         "stream": false,
         "temperature": 0,
         "messages": [
-            { "role": "system", "content": SYSTEM_PROMPT },
+            { "role": "system", "content": system_prompt(&request.source, &request.target) },
             { "role": "user", "content": text }
         ]
     });
@@ -378,7 +406,7 @@ pub fn run() {
     // GUI 版没有控制台，把 panic 文本落盘，方便事后排查
     std::panic::set_hook(Box::new(|info| {
         let text = format!("{info}\n");
-        let path = std::env::temp_dir().join("enzh-translate-panic.log");
+        let path = std::env::temp_dir().join("fish-translate-panic.log");
         let _ = std::fs::write(&path, &text);
         eprintln!("{text}");
     }));

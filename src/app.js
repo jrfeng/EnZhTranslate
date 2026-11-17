@@ -1,5 +1,5 @@
 /**
- * 英译中 · 独立版前端
+ * 多语言翻译 · 独立版前端
  *
  * 纯原生 JS，没有构建步骤。负责：Markdown 输入高亮、Markdown 预览/源码切换、
  * 术语表、模型选择、自动复制、进度动画，以及把请求发给本机服务。
@@ -45,7 +45,7 @@ const BALANCE_DANGER = 2
 const DEFAULT_BASE_URL = 'https://api.deepseek.com'
 const DEFAULT_MODEL = 'deepseek-chat'
 
-const TASK_BRIEF = [
+const TASK_STRUCTURE = [
   '【本次任务（优先于其他格式要求）】',
   '先把原文整理成 Markdown，再翻译：',
   '- 并列、分步、逐条的内容用有序或无序列表；',
@@ -53,20 +53,50 @@ const TASK_BRIEF = [
   '- 代码、命令、文件路径、接口路径、变量名用行内代码（反引号）包裹；',
   '- 纯叙述性段落保持为普通段落。',
   '只做结构整理，不许增删或改写任何信息。',
-  '',
-  '然后把整理出的 Markdown 翻译成简体中文：Markdown 标记和代码原样保留，代码块里的代码不翻译。',
-  '只输出译文 Markdown 本身，不要输出原文，不要任何解释或前言。',
-].join('\n')
+]
+
+/** 按目标语言生成用户消息里的任务说明 */
+function taskBrief(target) {
+  return [
+    ...TASK_STRUCTURE,
+    '',
+    `然后把整理出的 Markdown 翻译成${target}：Markdown 标记和代码原样保留，代码块里的代码不翻译。`,
+    `只输出${target}译文本身，不要输出原文，不要任何解释或前言。`,
+  ].join('\n')
+}
 
 const KEYS = {
-  settings: 'enzh-app.settings',
-  terms: 'enzh-app.terms',
-  autoCopy: 'enzh-app.auto-copy',
-  immediate: 'enzh-app.immediate',
-  termsOpen: 'enzh-app.terms-open',
-  view: 'enzh-app.view',
-  theme: 'enzh-app.theme',
+  settings: 'fish-app.settings',
+  terms: 'fish-app.terms',
+  autoCopy: 'fish-app.auto-copy',
+  immediate: 'fish-app.immediate',
+  termsOpen: 'fish-app.terms-open',
+  view: 'fish-app.view',
+  theme: 'fish-app.theme',
+  sourceLang: 'fish-app.source-lang',
+  targetLang: 'fish-app.target-lang',
 }
+
+/** 可选的源/目标语言：只收 DeepSeek 表现稳定的语种，中英排最前 */
+const LANGS = [
+  '简体中文',
+  '英语',
+  '日语',
+  '韩语',
+  '法语',
+  '德语',
+  '西班牙语',
+  '俄语',
+  '葡萄牙语',
+  '意大利语',
+  '阿拉伯语',
+  '越南语',
+  '泰国语',
+  '印尼语',
+]
+
+const DEFAULT_SOURCE_LANG = '英语'
+const DEFAULT_TARGET_LANG = '简体中文'
 
 /** 内置主题：auto 跟随系统 / b 浅色 / a 深色 / c 风格化 */
 const THEMES = [
@@ -103,9 +133,13 @@ const state = {
   termSource: '',
   termTarget: '',
   termsOpen: true,
+  sourceLang: DEFAULT_SOURCE_LANG,
+  targetLang: DEFAULT_TARGET_LANG,
   translatedText: '',
   translatedTerms: '',
   translatedModel: '',
+  translatedSource: '',
+  translatedTarget: '',
   copyState: 'idle',
   selectedModel: DEFAULT_MODEL,
   models: [],
@@ -135,6 +169,8 @@ for (const id of [
   'settings',
   'balance',
   'theme-select',
+  'source-lang',
+  'target-lang',
   'pick-image',
   'image-input',
   'ocr-status',
@@ -581,6 +617,11 @@ function loadPersisted() {
   const savedTheme = readStore(KEYS.theme)
   state.theme = THEMES.some((item) => item.id === savedTheme) ? savedTheme : 'auto'
 
+  const savedSource = readStore(KEYS.sourceLang)
+  state.sourceLang = LANGS.includes(savedSource) ? savedSource : DEFAULT_SOURCE_LANG
+  const savedTarget = readStore(KEYS.targetLang)
+  state.targetLang = LANGS.includes(savedTarget) ? savedTarget : DEFAULT_TARGET_LANG
+
   state.selectedModel = config.model
 }
 
@@ -590,8 +631,8 @@ function saveSettings() {
 
 /* -------------------------------------------------------------- 组合请求 */
 
-function composeSource(text, terms) {
-  const blocks = [TASK_BRIEF]
+function composeSource(text, terms, target) {
+  const blocks = [taskBrief(target)]
   if (terms.length > 0) {
     blocks.push('【术语提示（翻译时必须优先遵守）】\n' + terms.map((term) => '- ' + term).join('\n'))
   }
@@ -610,7 +651,9 @@ function isStale() {
     state.output.length > 0 &&
     (state.input.trim() !== state.translatedText ||
       termsSignature() !== state.translatedTerms ||
-      state.selectedModel !== state.translatedModel)
+      state.selectedModel !== state.translatedModel ||
+      state.sourceLang !== state.translatedSource ||
+      state.targetLang !== state.translatedTarget)
   )
 }
 
@@ -880,6 +923,12 @@ async function run() {
   const text = state.input.trim()
   if (text.length === 0 || state.phase === 'loading') return
 
+  // 原文和译文语言相同时没有翻译的意义，直接提醒
+  if (state.sourceLang === state.targetLang) {
+    showToast(`原文和译文都是${state.targetLang}，改一下其中一边再翻译。`, 'warn')
+    return
+  }
+
   if (config.apiKey.length === 0) {
     state.settingsOpen = true
     renderChrome()
@@ -893,13 +942,15 @@ async function run() {
 
   const model = state.selectedModel || config.model
 
-  // 同一段文本（且术语、模型都没变）已经有结果了，就不再重复发请求
+  // 同一段文本（且术语、模型、语言都没变）已经有结果了，就不再重复发请求
   if (
     state.phase === 'done' &&
     state.output.length > 0 &&
     text === state.translatedText &&
     termsSignature() === state.translatedTerms &&
-    model === state.translatedModel
+    model === state.translatedModel &&
+    state.sourceLang === state.translatedSource &&
+    state.targetLang === state.translatedTarget
   ) {
     return
   }
@@ -910,7 +961,9 @@ async function run() {
 
   try {
     const payload = await invokeTauri('translate', {
-      text: composeSource(text, state.terms),
+      text: composeSource(text, state.terms, state.targetLang),
+      source: state.sourceLang,
+      target: state.targetLang,
       apiKey: config.apiKey,
       baseURL: config.baseURL,
       model,
@@ -924,6 +977,8 @@ async function run() {
     state.translatedText = text
     state.translatedTerms = termsSignature()
     state.translatedModel = typeof payload.model === 'string' ? payload.model : model
+    state.translatedSource = state.sourceLang
+    state.translatedTarget = state.targetLang
     state.phase = 'done'
     state.copyState = 'idle'
     render()
@@ -1052,6 +1107,8 @@ function bind() {
       state.translatedText = ''
       state.translatedTerms = ''
       state.translatedModel = ''
+      state.translatedSource = ''
+      state.translatedTarget = ''
       render()
       return
     }
@@ -1208,6 +1265,8 @@ function bind() {
     state.translatedText = ''
     state.translatedTerms = ''
     state.translatedModel = ''
+    state.translatedSource = ''
+    state.translatedTarget = ''
     state.ocrMessage = ''
     state.ocrError = false
     el.source.value = ''
@@ -1304,6 +1363,18 @@ function bind() {
   el['theme-select'].addEventListener('change', () => {
     applyTheme(el['theme-select'].value)
     writeStore(KEYS.theme, state.theme)
+  })
+
+  el['source-lang'].addEventListener('change', () => {
+    state.sourceLang = el['source-lang'].value
+    writeStore(KEYS.sourceLang, state.sourceLang)
+    renderChrome()
+  })
+
+  el['target-lang'].addEventListener('change', () => {
+    state.targetLang = el['target-lang'].value
+    writeStore(KEYS.targetLang, state.targetLang)
+    renderChrome()
   })
 
   bindWindowControls()
@@ -1730,11 +1801,30 @@ function renderThemeSelect() {
   select.value = state.theme
 }
 
+/** 原文 / 译文语言下拉 */
+function renderLangSelects() {
+  for (const [key, current] of [
+    ['source-lang', state.sourceLang],
+    ['target-lang', state.targetLang],
+  ]) {
+    const select = el[key]
+    select.replaceChildren()
+    for (const lang of LANGS) {
+      const option = document.createElement('wa-option')
+      option.value = lang
+      option.textContent = lang
+      select.appendChild(option)
+    }
+    select.value = current
+  }
+}
+
 /* ---------------------------------------------------------------- 启动 */
 
 loadPersisted()
 applyTheme(state.theme)
 renderThemeSelect()
+renderLangSelects()
 el['api-key'].value = config.apiKey
 el['base-url'].value = config.baseURL === DEFAULT_BASE_URL ? '' : config.baseURL
 el['base-url'].placeholder = DEFAULT_BASE_URL

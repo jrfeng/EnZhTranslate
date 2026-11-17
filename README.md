@@ -1,4 +1,4 @@
-# 英译中 · EnZhTranslate
+# Fish翻译
 
 ![version](https://img.shields.io/badge/version-0.6.4-blue)
 ![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
@@ -16,7 +16,7 @@
 > 代码、界面、图标、构建脚本、CI 流水线与文档，全部在 [DeepSeek Harness](https://deepseek-harness.github.io/deepseek-harness/en/guide/quickstart) 的会话中由 AI 代理生成与迭代，没有手写代码。
 > 人类负责提出需求、挑选设计、决定发布节奏，并对每个版本做实际运行验收。
 
-一款面向开发者的英文转中文翻译工具。针对技术文本做了结构整理：把原文重排为 Markdown 再翻译，保留代码、命令、路径等术语的原始形态，输出可直接粘贴进文档。
+一款面向开发者的多语言翻译工具，内置 14 种常用语言、可自由指定原文与译文语言。针对技术文本做了结构整理：把原文重排为 Markdown 再翻译，保留代码、命令、路径等术语的原始形态，输出可直接粘贴进文档。
 
 翻译、图片识别、余额查询全部在本机发起，API Key 只保存在本机，不经过任何中间服务器。
 
@@ -44,11 +44,12 @@
 
 ### 翻译
 
-- 双栏布局：左侧英文输入、右侧中文译文，译文以 Markdown 渲染，可切换回源码视图
+- 双栏布局：左侧原文输入、右侧译文输出，译文以 Markdown 渲染，可切换回源码视图
+- **语言对可选**：原文 / 译文各自从 14 种语言里挑，默认英语 → 简体中文，选择会记住
 - 两侧都带 Markdown 语法高亮（标题、列表、引用、代码块、链接）
 - 支持「粘贴后翻译」：粘贴即自动翻译；也可 `Ctrl/Cmd + Enter` 手动触发
-- 相同文本 + 相同术语 + 相同模型不会重复请求，避免浪费额度
-- 修改原文、术语或模型后，旧译文标记为「需重新翻译」
+- 相同文本 + 相同术语 + 相同模型 + 相同语言对不会重复请求，避免浪费额度
+- 修改原文、术语、模型或语言后，旧译文标记为「需重新翻译」
 
 ### 术语表
 
@@ -156,7 +157,7 @@ chmod +x build-macos.sh
 未签名应用首次打开会被 Gatekeeper 拦截：右键 →「打开」，或执行
 
 ```bash
-xattr -dr com.apple.quarantine /Applications/EnZhTranslate.app
+xattr -dr com.apple.quarantine /Applications/FishTranslate.app
 ```
 
 ### Linux
@@ -199,8 +200,8 @@ chmod +x build-linux.sh
 
 | 产物 | 体积 | 说明 |
 |---|---|---|
-| `EnZhTranslate_<版本>_amd64.deb` | 约 2.9 MB | 依赖 `libwebkit2gtk-4.1-0`、`libgtk-3-0`，安装到 `/usr/bin/en-zh-translate` |
-| `EnZhTranslate_<版本>_amd64.AppImage` | 约 80 MB | 内置 WebKitGTK 运行时，免安装，体积大是正常的 |
+| `FishTranslate_<版本>_amd64.deb` | 约 2.9 MB | 依赖 `libwebkit2gtk-4.1-0`、`libgtk-3-0`，安装到 `/usr/bin/fish-translate` |
+| `FishTranslate_<版本>_amd64.AppImage` | 约 80 MB | 内置 WebKitGTK 运行时，免安装，体积大是正常的 |
 
 ```bash
 # 安装 deb
@@ -244,7 +245,7 @@ fc-cache -f
 
 项目遵循「先测试版、后正式版」：
 
-1. 运行 `debug\build-win-debug.cmd`：构建 debug 版并安装到 `%LOCALAPPDATA%\Programs\EnZhTranslateTest\`，先验证效果
+1. 运行 `debug\build-win-debug.cmd`：构建 debug 版并安装到 `%LOCALAPPDATA%\Programs\FishTranslateTest\`，先验证效果
 2. 确认无误后，再用 `build-win.cmd` 或 `npx tauri build` 出正式产物
 
 测试版与正式版共用同一个单实例锁，切换前请先关闭另一个。
@@ -365,7 +366,7 @@ Failed to setup app: runtime error: failed to create webview:
 WebView2 error: WindowsError(HRESULT(0x8000FFFF) "灾难性故障")
 ```
 
-将 exe 复制到工作区外（如 `%LOCALAPPDATA%\Programs\EnZhTranslate\`）即可正常运行。源码放在工作区内没有问题，仅运行位置受限。
+将 exe 复制到工作区外（如 `%LOCALAPPDATA%\Programs\FishTranslate\`）即可正常运行。源码放在工作区内没有问题，仅运行位置受限。
 
 **产物未做代码签名。** Windows 首次运行会触发 SmartScreen 提示，选择「更多信息 → 仍要运行」；macOS 首次打开需右键「打开」或执行 `xattr -dr com.apple.quarantine`。
 

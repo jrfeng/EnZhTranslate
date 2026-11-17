@@ -1,5 +1,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    en_zh_translate_lib::run()
+    fish_translate_lib::run()
 }

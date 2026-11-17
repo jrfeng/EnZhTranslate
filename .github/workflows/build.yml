@@ -74,12 +74,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
-          releaseName: ${{ github.ref_type == 'tag' && format('EnZhTranslate {0}', github.ref_name) || '' }}
+          releaseName: ${{ github.ref_type == 'tag' && format('FishTranslate {0}', github.ref_name) || '' }}
           releaseBody: |
             各平台产物见下方 assets。
 
-            - Windows：`EnZhTranslate_*_x64-setup.exe`（NSIS 安装包）
-            - macOS：`EnZhTranslate_*_aarch64.dmg`（Apple Silicon 原生）
+            - Windows：`FishTranslate_*_x64-setup.exe`（NSIS 安装包）
+            - macOS：`FishTranslate_*_aarch64.dmg`（Apple Silicon 原生）
 
             产物未签名：Windows 首次运行需在 SmartScreen 里选「更多信息 → 仍要运行」；
             macOS 首次打开需右键「打开」，或执行 `xattr -dr com.apple.quarantine`。
@@ -91,6 +91,6 @@ jobs:
         if: github.ref_type != 'tag'
         uses: actions/upload-artifact@v4
         with:
-          name: en-zh-translate-${{ matrix.name }}
+          name: fish-translate-${{ matrix.name }}
           path: ${{ matrix.paths }}
           if-no-files-found: error

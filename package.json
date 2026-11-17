@@ -1,5 +1,5 @@
 {
-  "name": "en-zh-translate-tauri",
+  "name": "fish-translate-tauri",
   "private": true,
   "version": "0.6.4",
   "description": "英译中桌面版（Tauri）",

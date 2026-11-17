@@ -31,12 +31,12 @@ cd /d "%~dp0..\src-tauri"
 cargo build
 if errorlevel 1 (echo Debug build failed. & pause & exit /b 1)
 
-set "DEST=%LOCALAPPDATA%\Programs\EnZhTranslateTest"
+set "DEST=%LOCALAPPDATA%\Programs\FishTranslateTest"
 if not exist "%DEST%" mkdir "%DEST%"
-copy /y "target\debug\en-zh-translate.exe" "%DEST%\EnZhTranslateTest.exe" >nul
+copy /y "target\debug\fish-translate.exe" "%DEST%\FishTranslateTest.exe" >nul
 
 echo.
-echo   Test build installed: %DEST%\EnZhTranslateTest.exe
+echo   Test build installed: %DEST%\FishTranslateTest.exe
 echo.
 echo   Notes:
 echo     - Close the release app first: both share the same single-instance lock.

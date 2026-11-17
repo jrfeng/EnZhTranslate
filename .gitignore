@@ -9,7 +9,8 @@ temp/
 
 # 构建产物与安装包不入库（在 Releases 或本地分发）
 build/
-EnZhTranslate_*.exe
+FishTranslate_*.exe
+Fish*.exe
 *.msi
 *.zip
 *.deb

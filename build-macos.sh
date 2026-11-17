@@ -97,7 +97,7 @@ cat <<'TIP'
 
 提示
   · 首次打开未签名的 .app 会被 Gatekeeper 拦下：右键 →「打开」，或
-      xattr -dr com.apple.quarantine /Applications/EnZhTranslate.app
+      xattr -dr com.apple.quarantine /Applications/FishTranslate.app
   · 想把 .app 拖进「应用程序」，直接打开 dmg 拖过去即可
   · 本机自用不需要开发者签名；要分发给别人得用 Apple Developer 证书签名+公证
 TIP

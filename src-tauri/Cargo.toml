@@ -1,13 +1,13 @@
 [package]
-name = "en-zh-translate"
+name = "fish-translate"
 version = "0.6.4"
-description = "English to Chinese translator"
+description = "Multi-language translator"
 edition = "2021"
 license = "MIT"
 rust-version = "1.77"
 
 [lib]
-name = "en_zh_translate_lib"
+name = "fish_translate_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
