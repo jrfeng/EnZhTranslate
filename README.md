@@ -3,6 +3,7 @@
 ![version](https://img.shields.io/badge/version-0.6.2-blue)
 ![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 ![stack](https://img.shields.io/badge/Tauri%202-Rust%20%2B%20Web%20Awesome-informational)
+![license](https://img.shields.io/badge/license-MIT-green)
 
 一款面向开发者的英文转中文翻译工具。针对技术文本做了结构整理：把原文重排为 Markdown 再翻译，保留代码、命令、路径等术语的原始形态，输出可直接粘贴进文档。
 
@@ -308,4 +309,6 @@ WebView2 error: WindowsError(HRESULT(0x8000FFFF) "灾难性故障")
 
 ## 许可
 
-未附带开源许可证，默认保留所有权利。如需用于商业场景或二次分发，请联系作者。
+本项目基于 [MIT License](LICENSE) 开源。
+
+Copyright (c) 2026 jrfeng
