@@ -1,6 +1,6 @@
 # Fish翻译
 
-![version](https://img.shields.io/badge/version-0.7.1-blue)
+![version](https://img.shields.io/badge/version-0.7.2-blue)
 ![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 ![stack](https://img.shields.io/badge/Tauri%202-Rust%20%2B%20Web%20Awesome-informational)
 ![license](https://img.shields.io/badge/license-MIT-green)
@@ -359,6 +359,12 @@ debug/                   测试与诊断脚本
 ---
 
 ## 更新日志
+
+### 0.7.2
+
+- **CI 产物改名**：Release 里的文件名统一用英文（`FishTranslate_*`），因为 GitHub 会抹掉资源名里的中文；安装后仍显示「Fish翻译」
+- **恢复三平台构建**：Windows（NSIS）、macOS（通用 dmg）、Linux（deb / AppImage）
+- 构建流程改为「先构建 → 改英文名 → 汇总发布」，不再依赖 tauri-action 的自动上传
 
 ### 0.7.1
 
