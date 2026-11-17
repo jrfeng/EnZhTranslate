@@ -294,6 +294,18 @@ body {
   margin: 0;
 }
 
+html {
+  /* 首帧时 Web Awesome 的组件还没升级完，<wa-select> 之类按内联元素撑得很高，
+     会临时触发竖向滚动条；组件就绪后滚动条又消失，整排工具栏就会横向跳 15px。
+     应用本身是固定视口布局（内部区域各自滚动），直接禁掉根滚动，消除这一次跳动。 */
+  overflow: hidden;
+}
+
+/* 组件升级完成前先别画：否则工具栏会按「未升级」的错误尺寸排版，再跳一下 */
+html:not(.app-ready) .app {
+  visibility: hidden;
+}
+
 body {
   background: var(--app-bg);
   color: var(--app-text);
@@ -1479,7 +1491,23 @@ html[data-theme='c'] .md code {
   position: relative;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   flex: 0 0 auto;
+  /* 固定宽度：占位符「余额 --」和真实数值「余额 ¥128.50」宽度不同，
+     锁死之后数字变化不会带动整排工具栏抖动 */
+  min-width: 108px;
+}
+
+.balance-wrap wa-tag {
+  justify-content: center;
+  /* 占位「余额 --」和真实数值「余额 ¥128.50」宽窄不同，
+     给标签一个固定最小宽度，两种状态下胶囊本身也不会变胖变瘦 */
+  min-width: 104px;
+}
+
+/* 占位态用弱化颜色，和真实余额区分开 */
+.balance-wrap wa-tag.is-placeholder::part(content) {
+  color: var(--app-muted);
 }
 
 .balance-progress {

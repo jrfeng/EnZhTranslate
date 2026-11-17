@@ -77,6 +77,8 @@ const KEYS = {
   theme: 'fish-app.theme',
   sourceLang: 'fish-app.source-lang',
   targetLang: 'fish-app.target-lang',
+  models: 'fish-app.models',
+  balance: 'fish-app.balance',
 }
 
 /** 可选的源/目标语言：只收 DeepSeek 表现稳定的语种，中英排最前 */
@@ -585,6 +587,21 @@ function removeStore(key) {
   }
 }
 
+/** 读取 JSON 形式的缓存，坏了就当没有 */
+function readJsonStore(key) {
+  const raw = readStore(key)
+  if (raw === null || raw.length === 0) return null
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
+
+function writeJsonStore(key, value) {
+  writeStore(key, JSON.stringify(value))
+}
+
 function loadPersisted() {
   try {
     const raw = readStore(KEYS.settings)
@@ -1056,22 +1073,29 @@ async function refreshBalance(manual = false) {
       return
     }
 
+    // 只有还没有数值时才摆占位；已经显示着余额时刷新，保持原数字不动，
+    // 否则每点一次刷新都会先闪一下「余额 --」
+    if (el.balance.classList.contains('is-placeholder') || el['balance-wrap'].hidden) {
+      showBalancePlaceholder()
+    }
+
     const payload = await invokeTauri('balance', { apiKey: config.apiKey, baseURL: config.baseURL })
     if (payload === null || payload === undefined || payload.ok !== true) {
-      setBalanceVisible(false)
+      // 拿不到就留着旧数字（或占位）不动，只改提示，避免布局和数值回弹
+      el.balance.title = '读取余额失败，点击重试'
       return
     }
     if (typeof payload.total !== 'string' || payload.total.length === 0) {
-      setBalanceVisible(false)
+      el.balance.title = '读取余额失败，点击重试'
       return
     }
 
     const symbol =
       payload.currency === 'USD' ? '$' : payload.currency === 'CNY' ? '¥' : String(payload.currency || '') + ' '
+    el.balance.classList.remove('is-placeholder')
     el.balance.textContent = '余额 ' + symbol + payload.total
     el.balance.title =
       '充值 ' + (payload.toppedUp || '0') + ' · 赠送 ' + (payload.granted || '0') + '（点击刷新）'
-
     // 余额偏低时变色提醒：< 3 橙色，< 2 红色，不可用直接红色
     const total = Number.parseFloat(payload.total)
     const hasTotal = Number.isFinite(total)
@@ -1081,6 +1105,13 @@ async function refreshBalance(manual = false) {
         : hasTotal && total < BALANCE_WARN
           ? 'warning'
           : 'brand'
+    // 缓存结果，下次启动先显示这个数字，再去请求最新值
+    writeJsonStore(KEYS.balance, {
+      text: el.balance.textContent,
+      title: el.balance.title,
+      variant: el.balance.variant,
+      savedAt: Date.now(),
+    })
     setBalanceVisible(true)
   } finally {
     if (manual) {
@@ -1106,6 +1137,31 @@ function setBalanceVisible(visible) {
   }
 }
 
+/**
+ * 余额是异步读回来的，先用同宽的占位撑住工具栏，
+ * 免得数值到达时整排控件（模型 / 主题 / 设置）被顶得跳一下。
+ */
+function showBalancePlaceholder() {
+  el.balance.classList.add('is-placeholder')
+  el.balance.textContent = '余额 --'
+  el.balance.title = '正在读取余额…'
+  setBalanceVisible(true)
+}
+
+/** 启动时先把上次缓存的余额显示出来，联网后再无缝更新 */
+function applyCachedBalance() {
+  const cached = readJsonStore(KEYS.balance)
+  if (cached === null || typeof cached.text !== 'string' || cached.text.length === 0) return false
+  el.balance.textContent = cached.text
+  el.balance.title = cached.title || '（点击刷新）'
+  if (typeof cached.variant === 'string' && cached.variant.length > 0) {
+    el.balance.variant = cached.variant
+  }
+  el.balance.classList.remove('is-placeholder')
+  setBalanceVisible(true)
+  return true
+}
+
 /* ------------------------------------------------------------ 设置与模型 */
 
 async function refreshModels() {
@@ -1121,6 +1177,8 @@ async function refreshModels() {
     const payload = await invokeTauri('models', { apiKey: config.apiKey, baseURL: config.baseURL })
     if (payload !== null && payload !== undefined && payload.ok === true && Array.isArray(payload.models)) {
       state.models = payload.models
+      // 缓存一份，下次启动先用它把下拉框填上，不用等网络
+      writeJsonStore(KEYS.models, { list: payload.models, savedAt: Date.now() })
       el['settings-hint'].textContent =
         payload.models.length > 0 ? '已读取 ' + payload.models.length + ' 个模型。' : '接口没有返回模型列表，将使用默认模型。'
     } else {
@@ -1131,6 +1189,15 @@ async function refreshModels() {
     el['settings-hint'].textContent = '模型列表读取失败：请检查网络后重试。'
   }
   renderModels()
+}
+
+/** 启动时先用上次缓存的模型列表渲染，避免下拉框空着 */
+function applyCachedModels() {
+  const cached = readJsonStore(KEYS.models)
+  if (cached === null || !Array.isArray(cached.list) || cached.list.length === 0) return false
+  state.models = cached.list
+  renderModels()
+  return true
 }
 
 /* ---------------------------------------------------------------- 绑定 */
@@ -1393,10 +1460,17 @@ function bind() {
   })
 
   el['save-settings'].addEventListener('click', () => {
+    const previousKey = config.apiKey
+    const previousBase = config.baseURL
     config.apiKey = el['api-key'].value.trim()
     const base = el['base-url'].value.trim()
     config.baseURL = base.length > 0 ? base : DEFAULT_BASE_URL
     saveSettings()
+    // 换了 Key 或接口地址，旧缓存就属于另一个账号了，先清掉免得显示错数据
+    if (config.apiKey !== previousKey || config.baseURL !== previousBase) {
+      removeStore(KEYS.models)
+      removeStore(KEYS.balance)
+    }
     // 换成不支持 OCR 的地址时，把已经选的图片也清掉
     if (!usesDeepSeekEndpoint() && state.image !== null) clearImage()
     renderChrome()
@@ -1879,6 +1953,9 @@ bind()
 renderAll()
 syncHighlight()
 if (config.apiKey.length > 0) {
+  // 先用上次缓存把界面填满（工具栏和下拉框立刻就是最终形态），再去请求最新数据
+  applyCachedModels()
+  if (usesDeepSeekEndpoint()) applyCachedBalance()
   void refreshModels()
   void refreshBalance()
 }
