@@ -21,6 +21,10 @@ reqwest = { version = "0.12", features = ["json", "multipart"] }
 base64 = "0.22"
 tauri-plugin-single-instance = "2"
 
+# 只有 Windows 走系统凭据管理器；其它平台暂时沿用前端保存的方式
+[target.'cfg(windows)'.dependencies]
+keyring = { version = "3", features = ["windows-native"] }
+
 [profile.release]
 codegen-units = 1
 lto = true

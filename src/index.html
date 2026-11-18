@@ -131,7 +131,30 @@
           </div>
           <div class="settings-body">
             <span class="field-label">API Key</span>
-            <wa-input id="api-key" type="password" size="s" appearance="outlined" password-toggle placeholder="sk-…" class="field-key"></wa-input>
+
+            <!-- Windows：Key 存在系统凭据库，界面只显示尾号，输入框一次性使用 -->
+            <span class="key-managed" id="key-managed" hidden>
+              <span class="key-state" id="key-state">未配置</span>
+              <wa-button id="key-edit-open" appearance="outlined" size="s">填写</wa-button>
+              <wa-button id="key-clear" appearance="plain" size="s" hidden>清除</wa-button>
+            </span>
+            <span class="key-edit" id="key-edit" hidden>
+              <wa-input id="api-key" type="password" size="s" appearance="outlined" placeholder="sk-…" class="field-key"></wa-input>
+              <wa-button id="key-save" variant="brand" size="s">保存</wa-button>
+              <wa-button id="key-cancel" appearance="plain" size="s">取消</wa-button>
+            </span>
+
+            <!-- 其它平台：暂时沿用原来的输入框（带显示切换） -->
+            <wa-input
+              id="api-key-legacy"
+              type="password"
+              size="s"
+              appearance="outlined"
+              password-toggle
+              placeholder="sk-…"
+              class="field-key key-legacy"
+            ></wa-input>
+
             <span class="field-label">接口地址</span>
             <wa-input id="base-url" size="s" appearance="outlined" class="field-url"></wa-input>
             <wa-button id="save-settings" variant="brand" size="s">保存并读取模型</wa-button>

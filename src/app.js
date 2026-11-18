@@ -171,6 +171,14 @@ const state = {
   /** 本次运行累计的 token 与次数 */
   usageTotal: 0,
   usageCount: 0,
+  /** API Key 是否交给系统凭据库保管（目前只有 Windows） */
+  keySupported: false,
+  /** 凭据库里是否已有 Key */
+  keyConfigured: false,
+  /** 已配置 Key 的尾部展示，如 sk-…3f2a */
+  keyPreview: '',
+  /** 是否正在填写新的 Key（一次性输入框） */
+  keyEditing: false,
 }
 
 const el = {}
@@ -250,6 +258,14 @@ for (const id of [
   'usage-pop-total',
   'usage-rows',
   'usage-pop-foot',
+  'key-managed',
+  'key-state',
+  'key-edit',
+  'key-edit-open',
+  'key-save',
+  'key-cancel',
+  'key-clear',
+  'api-key-legacy',
 ]) {
   el[id] = document.getElementById(id)
 }
@@ -663,7 +679,131 @@ function loadPersisted() {
 }
 
 function saveSettings() {
-  writeStore(KEYS.settings, JSON.stringify(config))
+  // Windows 下 Key 存在系统凭据库，不写进 localStorage
+  const payload = state.keySupported
+    ? { baseURL: config.baseURL, model: config.model }
+    : { apiKey: config.apiKey, baseURL: config.baseURL, model: config.model }
+  writeStore(KEYS.settings, JSON.stringify(payload))
+}
+
+/** 是否已有可用的 API Key（Windows 看凭据库，其它平台看本地设置） */
+function hasApiKey() {
+  return state.keySupported ? state.keyConfigured : config.apiKey.trim().length > 0
+}
+
+/* ------------------------------------------------------------ API Key 管理 */
+
+function renderKeyState() {
+  el['key-managed'].hidden = !state.keySupported
+  el['api-key-legacy'].hidden = state.keySupported
+  if (!state.keySupported) return
+
+  el['key-state'].textContent = state.keyConfigured ? '已配置 ' + state.keyPreview : '未配置'
+  el['key-state'].classList.toggle('is-set', state.keyConfigured)
+  el['key-edit-open'].textContent = state.keyConfigured ? '更换' : '填写'
+  el['key-clear'].hidden = !state.keyConfigured
+  el['key-edit'].hidden = !state.keyEditing
+  el['key-edit-open'].hidden = state.keyEditing
+}
+
+function openKeyEdit() {
+  if (!state.keySupported) return
+  state.keyEditing = true
+  renderKeyState()
+  el['api-key'].value = ''
+  el['api-key'].focus()
+}
+
+function closeKeyEdit() {
+  state.keyEditing = false
+  el['api-key'].value = ''
+  renderKeyState()
+}
+
+async function saveApiKey() {
+  const key = el['api-key'].value.trim()
+  if (key.length === 0) {
+    showToast('API Key 不能为空。', 'warn')
+    return
+  }
+  const payload = await invokeTauri('save_key', { key })
+  if (payload === null || payload === undefined || payload.ok !== true) {
+    showToast(localizeError(payload?.error, '保存 API Key 失败。'), 'error')
+    return
+  }
+  state.keyConfigured = true
+  state.keyPreview = typeof payload.preview === 'string' ? payload.preview : ''
+  state.keyEditing = false
+  el['api-key'].value = ''
+  renderKeyState()
+  renderChrome()
+  showToast('API Key 已保存到系统凭据库。', 'warn')
+  void refreshModels()
+  void refreshBalance()
+}
+
+async function clearApiKey() {
+  const payload = await invokeTauri('clear_key')
+  if (payload === null || payload === undefined || payload.ok !== true) {
+    showToast(localizeError(payload?.error, '清除 API Key 失败。'), 'error')
+    return
+  }
+  state.keyConfigured = false
+  state.keyPreview = ''
+  renderKeyState()
+  renderChrome()
+}
+
+/**
+ * 启动时初始化 Key 状态：
+ * 1. 问后端是否支持系统凭据库
+ * 2. 旧版本留在 localStorage 的明文 Key，迁移进凭据库后立刻删掉本地副本
+ * 3. 迁移失败按约定清空，要求用户重填
+ */
+async function initApiKey() {
+  const legacy = config.apiKey.trim()
+  let status = null
+  try {
+    status = await invokeTauri('key_status')
+  } catch {
+    status = null
+  }
+  state.keySupported = !!(status !== null && status !== undefined && status.ok === true && status.supported !== false)
+
+  if (!state.keySupported) {
+    renderKeyState()
+    return
+  }
+
+  if (legacy.length > 0) {
+    const saved = await invokeTauri('save_key', { key: legacy })
+    config.apiKey = ''
+    saveSettings()
+    if (saved !== null && saved !== undefined && saved.ok === true) {
+      state.keyConfigured = true
+      state.keyPreview = typeof saved.preview === 'string' ? saved.preview : ''
+    } else {
+      await invokeTauri('clear_key')
+      state.keyConfigured = false
+      state.keyPreview = ''
+      showToast('API Key 迁移到系统凭据库失败，请重新填写。', 'warn')
+    }
+  } else {
+    state.keyConfigured = status.configured === true
+    state.keyPreview = typeof status.preview === 'string' ? status.preview : ''
+  }
+
+  renderKeyState()
+}
+
+/** 有 Key 之后再拉模型与余额（Key 可能来自系统凭据库） */
+async function bootstrapRemote() {
+  await initApiKey()
+  if (!hasApiKey()) return
+  applyCachedModels()
+  if (usesDeepSeekEndpoint()) applyCachedBalance()
+  void refreshModels()
+  void refreshBalance()
 }
 
 /* -------------------------------------------------------------- 组合请求 */
@@ -740,7 +880,7 @@ function renderChrome() {  const loading = state.phase === 'loading'
 
   el.settings.hidden = !state.settingsOpen
   el['settings-toggle'].setAttribute('aria-expanded', String(state.settingsOpen))
-  el['settings-dot'].hidden = config.apiKey.length > 0
+  el['settings-dot'].hidden = hasApiKey()
 
   el['terms-toggle'].textContent = state.termsOpen ? '收起' : '展开'
   el['terms-body'].hidden = !state.termsOpen
@@ -1074,7 +1214,7 @@ async function run() {
     return
   }
 
-  if (config.apiKey.length === 0) {
+  if (!hasApiKey()) {
     state.settingsOpen = true
     renderChrome()
     el['settings-hint'].textContent = '请先填写 API Key，再翻译。'
@@ -1188,7 +1328,7 @@ async function refreshBalance(manual = false) {
       setBalanceVisible(false)
       return
     }
-    if (config.apiKey.length === 0) {
+    if (!hasApiKey()) {
       setBalanceVisible(false)
       return
     }
@@ -1285,7 +1425,7 @@ function applyCachedBalance() {
 /* ------------------------------------------------------------ 设置与模型 */
 
 async function refreshModels() {
-  if (config.apiKey.length === 0) {
+  if (!hasApiKey()) {
     state.models = []
     renderModels()
     el['settings-hint'].textContent = '填写 API Key 后会自动读取可用模型。'
@@ -1598,15 +1738,26 @@ function bind() {
     renderChrome()
   })
 
+  el['key-edit-open'].addEventListener('click', openKeyEdit)
+  el['key-cancel'].addEventListener('click', closeKeyEdit)
+  el['key-clear'].addEventListener('click', () => void clearApiKey())
+  el['key-save'].addEventListener('click', () => void saveApiKey())
+  el['api-key'].addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      void saveApiKey()
+    }
+  })
+
   el['save-settings'].addEventListener('click', () => {
-    const previousKey = config.apiKey
     const previousBase = config.baseURL
-    config.apiKey = el['api-key'].value.trim()
+    // 只有不支持系统凭据库的平台，才把 Key 存在本地设置里
+    if (!state.keySupported) config.apiKey = el['api-key-legacy'].value.trim()
     const base = el['base-url'].value.trim()
     config.baseURL = base.length > 0 ? base : DEFAULT_BASE_URL
     saveSettings()
-    // 换了 Key 或接口地址，旧缓存就属于另一个账号了，先清掉免得显示错数据
-    if (config.apiKey !== previousKey || config.baseURL !== previousBase) {
+    // 换了接口地址，旧缓存就属于另一个账号了，先清掉免得显示错数据
+    if (config.baseURL !== previousBase) {
       removeStore(KEYS.models)
       removeStore(KEYS.balance)
     }
@@ -1904,7 +2055,7 @@ async function runOcr(dataUrl, name, mime) {
     ocrFail(OCR_UNSUPPORTED)
     return
   }
-  if (config.apiKey.length === 0) {
+  if (!hasApiKey()) {
     ocrFail('请先在「设置」里填写 API Key。')
     return
   }
@@ -1976,7 +2127,7 @@ async function handleImageFile(file, source = 'file') {
     ocrFail('图片超过 20 MB，换一张小一点的。')
     return
   }
-  if (config.apiKey.length === 0) {
+  if (!hasApiKey()) {
     ocrFail('请先在「设置」里填写 API Key。')
     return
   }
@@ -2084,17 +2235,13 @@ loadPersisted()
 applyTheme(state.theme)
 renderThemeSelect()
 renderLangSelects()
-el['api-key'].value = config.apiKey
+el['api-key-legacy'].value = config.apiKey
 el['base-url'].value = config.baseURL === DEFAULT_BASE_URL ? '' : config.baseURL
 el['base-url'].placeholder = DEFAULT_BASE_URL
 el.source.value = state.input
 bind()
 renderAll()
 syncHighlight()
-if (config.apiKey.length > 0) {
-  // 先用上次缓存把界面填满（工具栏和下拉框立刻就是最终形态），再去请求最新数据
-  applyCachedModels()
-  if (usesDeepSeekEndpoint()) applyCachedBalance()
-  void refreshModels()
-  void refreshBalance()
-}
+renderKeyState()
+// Key 可能来自系统凭据库，拿到之后才谈得上拉模型 / 余额
+void bootstrapRemote()

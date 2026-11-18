@@ -988,6 +988,31 @@ html[data-theme='c'] .toggle.on {
   padding: 10px 14px 14px;
 }
 
+/* API Key：Windows 下只显示尾号 + 按钮，输入框一次性 */
+.key-managed {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.key-state {
+  font-size: var(--wa-font-size-xs);
+  color: var(--app-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.key-state.is-set {
+  color: var(--app-text);
+}
+
+.key-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
 .field-key,
 .field-url {
   width: 260px;
