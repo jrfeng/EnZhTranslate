@@ -416,16 +416,19 @@ struct ClipboardWriteRequest {
     text: String,
 }
 
-/// 读系统剪贴板的文本（自定义右键菜单的「粘贴」用）
+/// 读系统剪贴板的文本和 HTML（自定义右键菜单的「粘贴」用：
+/// 有 HTML 就转成 Markdown，没有就退回纯文本）
 #[tauri::command]
 async fn clipboard_read() -> Value {
-    match arboard::Clipboard::new() {
-        Ok(mut clipboard) => match clipboard.get_text() {
-            Ok(text) => json!({ "ok": true, "text": text }),
-            Err(_) => json!({ "ok": true, "text": "" }),
-        },
-        Err(error) => error_json("CLIPBOARD", format!("无法访问剪贴板：{error}")),
-    }
+    let mut clipboard = match arboard::Clipboard::new() {
+        Ok(clipboard) => clipboard,
+        Err(error) => return error_json("CLIPBOARD", format!("无法访问剪贴板：{error}")),
+    };
+
+    let text = clipboard.get_text().unwrap_or_default();
+    let html = clipboard.get().html().unwrap_or_default();
+
+    json!({ "ok": true, "text": text, "html": html })
 }
 
 /// 写系统剪贴板的文本（自定义右键菜单的「复制 / 剪切」用）

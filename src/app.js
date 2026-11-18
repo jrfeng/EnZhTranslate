@@ -5,6 +5,8 @@
  * 术语表、模型选择、自动复制、进度动画，以及把请求发给本机服务。
  */
 
+import { htmlToMarkdown } from './markdown-from-html.js'
+
 /* ------------------------------------------------------------ 常量与状态 */
 
 /** 把致命错误直接显示在页面上，避免出现「一片白」却无从排查 */
@@ -1365,6 +1367,29 @@ async function clipboardReadText() {
     : ''
 }
 
+/** 读剪贴板，返回 { text, html }；html 为空表示来源没有富文本 */
+async function clipboardReadContent() {
+  const payload = await invokeTauri('clipboard_read')
+  const ok = payload !== null && payload !== undefined && payload.ok === true
+  return {
+    text: ok && typeof payload.text === 'string' ? payload.text : '',
+    html: ok && typeof payload.html === 'string' ? payload.html : '',
+  }
+}
+
+/** 把 HTML 片段转成 Markdown；转不动就退回纯文本 */
+function htmlToMarkdownOrText(html, fallbackText) {
+  if (typeof html === 'string' && html.trim().length > 0) {
+    try {
+      const markdown = htmlToMarkdown(html)
+      if (markdown.length > 0) return markdown
+    } catch (error) {
+      /* 解析失败就走纯文本 */
+    }
+  }
+  return fallbackText
+}
+
 function clipboardWriteText(text) {
   return invokeTauri('clipboard_write', { text })
 }
@@ -1410,8 +1435,9 @@ function buildContextItems(region, event) {
     items.push({
       label: '粘贴',
       run: async () => {
-        const text = await clipboardReadText()
-        if (text.length > 0) insertInto(input, text)
+        const { text, html } = await clipboardReadContent()
+        const pasted = htmlToMarkdownOrText(html, text)
+        if (pasted.length > 0) insertInto(input, pasted)
       },
     })
     items.push({
@@ -1586,6 +1612,18 @@ function handleContextMenuKeydown(event) {
 }
 
 function bind() {
+  // Ctrl+V：带格式的内容（网页、Word、Notion 等）先转成 Markdown 再插入；
+  // 纯文本仍然走浏览器原生粘贴，不干预
+  el.source.addEventListener('paste', (event) => {
+    const data = event.clipboardData
+    if (data === null || data === undefined) return
+    const html = data.getData('text/html')
+    if (typeof html !== 'string' || html.trim().length === 0) return
+    event.preventDefault()
+    const pasted = htmlToMarkdownOrText(html, data.getData('text/plain'))
+    if (pasted.length > 0) insertInto(el.source, pasted)
+  })
+
   // 右键：屏蔽浏览器菜单，改用自绘菜单（样式跟随主题）
   document.addEventListener('contextmenu', (event) => {
     const items = buildContextItems(contextRegion(event), event)
