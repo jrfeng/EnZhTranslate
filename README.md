@@ -6,7 +6,7 @@
 ![license](https://img.shields.io/badge/license-MIT-green)
 ![ai-built](https://img.shields.io/badge/built%20with-DeepSeek%20Harness-4D6BFE)
 
-> **个人用小工具，需要者自取。**
+> **自用小工具，需要者自取：[下载](https://github.com/jrfeng/FishTranslate/releases)**
 
 > **本项目完全由 AI 编码完成。**
 >
