@@ -977,6 +977,29 @@ function renderTerms() {
   })
 }
 
+/** 给 wa-select 补一个下箭头（Web Awesome 自带的 wa-icon 没有注册，默认不可见） */
+function ensureSelectChevron(select) {
+  if (select === null || select === undefined) return
+  if (select.querySelector('[slot="expand-icon"]') !== null) return
+  const ns = 'http://www.w3.org/2000/svg'
+  const svg = document.createElementNS(ns, 'svg')
+  svg.setAttribute('slot', 'expand-icon')
+  svg.setAttribute('class', 'select-chevron')
+  svg.setAttribute('viewBox', '0 0 12 12')
+  svg.setAttribute('width', '10')
+  svg.setAttribute('height', '10')
+  svg.setAttribute('aria-hidden', 'true')
+  const path = document.createElementNS(ns, 'path')
+  path.setAttribute('d', 'M2.5 4.4 6 7.9l3.5-3.5')
+  path.setAttribute('fill', 'none')
+  path.setAttribute('stroke', 'currentColor')
+  path.setAttribute('stroke-width', '1.6')
+  path.setAttribute('stroke-linecap', 'round')
+  path.setAttribute('stroke-linejoin', 'round')
+  svg.appendChild(path)
+  select.appendChild(svg)
+}
+
 function renderModels() {
   const select = el['model-select']
   select.replaceChildren()
@@ -994,6 +1017,7 @@ function renderModels() {
   const next = exists ? wanted : list[0].id
   select.value = next
   state.selectedModel = next
+  ensureSelectChevron(select)
 }
 
 function render() {
@@ -2419,6 +2443,7 @@ function renderThemeSelect() {
     select.appendChild(option)
   }
   select.value = state.theme
+  ensureSelectChevron(select)
 }
 
 /** 原文 / 译文语言下拉 */
@@ -2436,6 +2461,7 @@ function renderLangSelects() {
       select.appendChild(option)
     }
     select.value = current
+    ensureSelectChevron(select)
   }
 }
 
