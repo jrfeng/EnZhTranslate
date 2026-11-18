@@ -83,6 +83,7 @@ const KEYS = {
   balance: 'fish-app.balance',
 }
 
+
 /** 可选的源/目标语言：只收 DeepSeek 表现稳定的语种，中英排最前 */
 const LANGS = [
   '简体中文',
@@ -156,7 +157,6 @@ const state = {
   ocrBusy: false,
   /** 用户点击余额手动刷新时显示进度条 */
   balanceBusy: false,
-  ocrMessage: '',
   ocrError: false,
   /** 这张图是否已经跑过一次 OCR（跑过才显示「刷新」按钮） */
   ocrDone: false,
@@ -190,7 +190,6 @@ for (const id of [
   'target-lang',
   'pick-image',
   'image-input',
-  'ocr-status',
   'ocr-progress',
   'image-preview',
   'image-thumb',
@@ -711,9 +710,6 @@ function renderChrome() {  const loading = state.phase === 'loading'
   el['image-refresh'].hidden = !state.ocrDone
   el['image-refresh'].disabled = ocrBusy || loading
   el['image-refresh'].classList.toggle('is-spinning', ocrBusy)
-  el['ocr-status'].hidden = state.ocrMessage.length === 0
-  el['ocr-status'].textContent = state.ocrMessage
-  el['ocr-status'].classList.toggle('error', state.ocrError)
 
   el['image-preview'].hidden = state.image === null
   if (state.image !== null) {
@@ -976,6 +972,29 @@ function renderTerms() {
   })
 }
 
+/** 给 wa-select 补一个下箭头（Web Awesome 自带的 wa-icon 没有注册，默认不可见） */
+function ensureSelectChevron(select) {
+  if (select === null || select === undefined) return
+  if (select.querySelector('[slot="expand-icon"]') !== null) return
+  const ns = 'http://www.w3.org/2000/svg'
+  const svg = document.createElementNS(ns, 'svg')
+  svg.setAttribute('slot', 'expand-icon')
+  svg.setAttribute('class', 'select-chevron')
+  svg.setAttribute('viewBox', '0 0 12 12')
+  svg.setAttribute('width', '10')
+  svg.setAttribute('height', '10')
+  svg.setAttribute('aria-hidden', 'true')
+  const path = document.createElementNS(ns, 'path')
+  path.setAttribute('d', 'M2.5 4.4 6 7.9l3.5-3.5')
+  path.setAttribute('fill', 'none')
+  path.setAttribute('stroke', 'currentColor')
+  path.setAttribute('stroke-width', '1.6')
+  path.setAttribute('stroke-linecap', 'round')
+  path.setAttribute('stroke-linejoin', 'round')
+  svg.appendChild(path)
+  select.appendChild(svg)
+}
+
 function renderModels() {
   const select = el['model-select']
   select.replaceChildren()
@@ -993,6 +1012,7 @@ function renderModels() {
   const next = exists ? wanted : list[0].id
   select.value = next
   state.selectedModel = next
+  ensureSelectChevron(select)
 }
 
 function render() {
@@ -1611,6 +1631,42 @@ function handleContextMenuKeydown(event) {
   }
 }
 
+/* ------------------------------------------------------------ 宽度调试角标 */
+
+function renderSizeBadge() {
+  const badge = document.getElementById('size-badge')
+  if (badge === null) return
+  const width = Math.round(window.innerWidth)
+  const height = Math.round(window.innerHeight)
+  badge.textContent = width + ' × ' + height
+}
+
+/**
+ * 宽度调试角标：Ctrl+Shift+D 开关（默认关闭，纯测试用）
+ * 显示当前窗口尺寸和命中的断点
+ */
+function initSizeBadge() {
+  const enabled = readStore('fish-app.debug-size') === '1'
+
+  const badge = document.createElement('div')
+  badge.id = 'size-badge'
+  badge.hidden = !enabled
+  badge.setAttribute('aria-hidden', 'true')
+  document.body.appendChild(badge)
+  renderSizeBadge()
+
+  window.addEventListener('resize', renderSizeBadge)
+
+  document.addEventListener('keydown', (event) => {
+    if (event.ctrlKey !== true || event.shiftKey !== true) return
+    if (String(event.key).toLowerCase() !== 'd') return
+    event.preventDefault()
+    badge.hidden = !badge.hidden
+    writeStore('fish-app.debug-size', badge.hidden ? '0' : '1')
+    renderSizeBadge()
+  })
+}
+
 function bind() {
   // Ctrl+V：带格式的内容（网页、Word、Notion 等）先转成 Markdown 再插入；
   // 纯文本仍然走浏览器原生粘贴，不干预
@@ -1838,7 +1894,6 @@ function bind() {
     state.translatedModel = ''
     state.translatedSource = ''
     state.translatedTarget = ''
-    state.ocrMessage = ''
     state.ocrError = false
     el.source.value = ''
     clearImage()
@@ -1974,36 +2029,6 @@ function bind() {
 
 /** 单张图片上限，超过直接拒绝（OCR 接口本身允许 100 MiB，但上传很慢） */
 const OCR_MAX_BYTES = 20 * 1024 * 1024
-
-function setOcrStatus(message, isError = false) {
-  state.ocrMessage = message
-  state.ocrError = isError
-  renderChrome()
-}
-
-/** 识别期间每秒更新一次已用时间，避免长时间没有反馈 */
-let ocrTicker = 0
-
-function startOcrTicker() {
-  const startedAt = Date.now()
-  stopOcrTicker()
-  ocrTicker = window.setInterval(() => {
-    if (!state.ocrBusy) {
-      stopOcrTicker()
-      return
-    }
-    const seconds = Math.floor((Date.now() - startedAt) / 1000)
-    state.ocrMessage = '正在识别图片… ' + seconds + 's'
-    el['ocr-status'].textContent = state.ocrMessage
-  }, 1000)
-}
-
-function stopOcrTicker() {
-  if (ocrTicker !== 0) {
-    window.clearInterval(ocrTicker)
-    ocrTicker = 0
-  }
-}
 
 /** 文件读成 base64（去掉 data: 前缀） */
 function fileToBase64(file) {
@@ -2212,7 +2237,6 @@ function ocrErrorMessage(error) {
 
 /** OCR 出错：行内状态 + Toast 一起提示 */
 function ocrFail(message) {
-  setOcrStatus(message, true)
   showToast(message)
 }
 
@@ -2242,8 +2266,8 @@ async function runOcr(dataUrl, name, mime) {
   }
 
   state.ocrBusy = true
-  setOcrStatus('正在识别图片…')
-  startOcrTicker()
+  // 进度条靠 renderChrome 里的 ocr-progress 控制，这里是唯一的触发点
+  renderChrome()
 
   const payload = await invokeTauri('ocr', {
     apiKey: config.apiKey,
@@ -2254,7 +2278,8 @@ async function runOcr(dataUrl, name, mime) {
   })
 
   state.ocrBusy = false
-  stopOcrTicker()
+  // 出错时下面会提前 return，所以先收掉进度条
+  renderChrome()
   // 请求有结果了（成功或失败都算），此时才显示「刷新」
   state.ocrDone = true
 
@@ -2265,7 +2290,6 @@ async function runOcr(dataUrl, name, mime) {
 
   const recognized = cleanupOcrText(payload.text)
   if (recognized.length === 0) {
-    setOcrStatus('没有识别到文字', true)
     showToast('没有识别到文字，换一张更清晰的图片试试。')
     return
   }
@@ -2273,7 +2297,6 @@ async function runOcr(dataUrl, name, mime) {
   el.source.value = recognized
   state.input = recognized
   syncHighlight()
-  setOcrStatus('')
   render()
 
   if (state.immediate) void run()
@@ -2382,6 +2405,7 @@ function renderThemeSelect() {
     select.appendChild(option)
   }
   select.value = state.theme
+  ensureSelectChevron(select)
 }
 
 /** 原文 / 译文语言下拉 */
@@ -2399,6 +2423,7 @@ function renderLangSelects() {
       select.appendChild(option)
     }
     select.value = current
+    ensureSelectChevron(select)
   }
 }
 
@@ -2413,6 +2438,7 @@ el['base-url'].value = config.baseURL === DEFAULT_BASE_URL ? '' : config.baseURL
 el['base-url'].placeholder = DEFAULT_BASE_URL
 el.source.value = state.input
 bind()
+initSizeBadge()
 renderAll()
 syncHighlight()
 if (config.apiKey.length > 0) {

@@ -485,12 +485,23 @@ html[data-theme='c'] .win-btn-close:hover {
   color: var(--app-muted);
 }
 
-.head-actions {
+/* 模型：单独一块，靠右推到工具栏右半边 */
+.head-model {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-left: auto;
   flex: 0 0 auto;
+  min-width: 0;
+}
+
+/* 主题 / 设置 / 余额：紧跟模型 */
+.head-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  min-width: 0;
 }
 
 .field-label {
@@ -528,6 +539,19 @@ html[data-theme='c'] .win-btn-close:hover {
 }
 
 /* 模型名可能较长（deepseek-reasoner 之类），留足显示宽度 */
+/* 下拉框的下箭头（Web Awesome 默认的 wa-icon 没注册，改用自己注入的 SVG） */
+wa-select::part(expand-icon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--app-muted);
+}
+
+.select-chevron {
+  display: block;
+  flex: 0 0 auto;
+}
+
 .model-select {
   width: 184px;
 }
@@ -587,24 +611,22 @@ html[data-theme='c'] .win-btn-close:hover {
   font-variant-numeric: tabular-nums;
 }
 
+/* 卡片底部一栏：「原文」面板的字符数放在左下角 */
+.card-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 2px 14px 10px;
+}
+
 .stale {
   font-size: var(--wa-font-size-xs);
   color: var(--wa-color-danger-fill-loud, #c2261a);
 }
 
 /* 图片识别状态提示*/
-.ocr-status {
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: var(--wa-font-size-xs);
-  color: var(--app-muted);
-}
 
-.ocr-status.error {
-  color: var(--wa-color-danger-fill-loud, #c2261a);
-}
 
 /* 已选图片的预览条*/
 .image-preview {
@@ -1417,6 +1439,31 @@ html[data-theme='b'] .usage-pop {
   color: var(--app-muted);
 }
 
+/* ------------------------------------------------------------ 宽度调试角标 */
+
+#size-badge {
+  position: fixed;
+  left: 10px;
+  bottom: 10px;
+  z-index: 3000;
+  padding: 4px 8px;
+  border: var(--app-line) solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-panel);
+  color: var(--app-text);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  pointer-events: none;
+  opacity: 0.92;
+  box-shadow: var(--app-shadow);
+}
+
+html[data-theme='c'] #size-badge,
+html[data-theme='d'] #size-badge {
+  box-shadow: 3px 3px 0 var(--app-border);
+}
+
 /* ------------------------------------------------------------ 右键菜单 */
 
 .ctx-menu {
@@ -1872,31 +1919,22 @@ html[data-theme='c'] .toast {
 
 /* ---------------------------------------------------------------- 响应式*/
 
-@media (max-width: 900px) {
-  .workspace {
-    padding: 10px;
-  }
-  .grid {
-    grid-template-columns: minmax(0, 1fr);
-    overflow: auto;
-  }
-  .col {
-    min-height: 420px;
-  }
-  .sub {
-    display: none;
-  }
-  .field-key,
-  .field-url {
-    width: 190px;
-  }
-  .model-select {
-    width: 160px;
-  }
-  .theme-select {
-    width: 126px;
-  }
-}
+
+/* ============================================================================
+   中等宽度（901–1180px）：工具栏固定两行分组
+   —— 第一行 语言对 + 模型，第二行 主题 / 设置 / 余额（右对齐）
+   ========================================================================== */
+
+
+/* ============================================================================
+   紧凑宽度（≤640px）：两行工具栏 + 单列卡片 + 术语折叠成一行
+   ========================================================================== */
+
+
+/* ============================================================================
+   手机宽度（≤420px）：标题栏极简 + 翻译改为右下悬浮按钮 + 触控尺寸
+   ========================================================================== */
+
 
 /* ============================================================================
    文本选择：桌面应用里不要出现网页那种「拖蓝」
