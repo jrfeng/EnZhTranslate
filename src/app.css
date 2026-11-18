@@ -1897,3 +1897,32 @@ html[data-theme='c'] .toast {
     width: 126px;
   }
 }
+
+/* ============================================================================
+   文本选择：桌面应用里不要出现网页那种「拖蓝」
+   —— 只有输入框、译文输出区、校验预览允许划词
+   ========================================================================== */
+
+html,
+body,
+.app {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+textarea,
+input,
+#output,
+#output *,
+#verify-preview,
+#verify-preview * {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* 右键菜单的标签本身不需要被选中 */
+.ctx-menu,
+.ctx-menu * {
+  user-select: none;
+  -webkit-user-select: none;
+}
