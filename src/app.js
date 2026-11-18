@@ -1626,12 +1626,13 @@ function bind() {
 
   // 右键：屏蔽浏览器菜单，改用自绘菜单（样式跟随主题）
   document.addEventListener('contextmenu', (event) => {
+    // 任何地方都不弹浏览器原生菜单，没有可用项时干脆什么都不弹
+    event.preventDefault()
     const items = buildContextItems(contextRegion(event), event)
     if (items.length === 0) {
       hideContextMenu()
       return
     }
-    event.preventDefault()
     showContextMenu(items, event.clientX, event.clientY)
   })
 
