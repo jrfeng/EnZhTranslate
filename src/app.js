@@ -116,6 +116,12 @@ const THEMES = [
 
 const config = { apiKey: '', baseURL: DEFAULT_BASE_URL, model: DEFAULT_MODEL }
 
+/** 当前是否跑在 Tauri 窗口里（浏览器里调试时为 false） */
+function isTauriRuntime() {
+  const core = window.__TAURI__ !== undefined ? window.__TAURI__.core : undefined
+  return core !== undefined && core !== null && typeof core.invoke === 'function'
+}
+
 /** 调用 Rust 侧命令；不在 Tauri 窗口里打开时返回一个可读的错误。 */
 function invokeTauri(command, request) {
   const core = window.__TAURI__ !== undefined ? window.__TAURI__.core : undefined
@@ -1064,15 +1070,27 @@ function legacyCopy(text) {
 async function copyText(text) {
   if (text.length === 0) return false
   let copied = false
+
+  // 走 Rust 的原生剪贴板：不经过 WebView2 的 Clipboard API，不会弹权限询问
   try {
-    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-      await navigator.clipboard.writeText(text)
-      copied = true
-    }
+    const payload = await invokeTauri('clipboard_write', { text })
+    copied = payload !== null && payload !== undefined && payload.ok === true
   } catch {
     copied = false
   }
-  if (!copied) copied = legacyCopy(text)
+
+  // 浏览器里调试时没有 Tauri，退回 execCommand / Clipboard API
+  if (!copied && !isTauriRuntime()) copied = legacyCopy(text)
+  if (!copied && !isTauriRuntime()) {
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        await navigator.clipboard.writeText(text)
+        copied = true
+      }
+    } catch {
+      copied = false
+    }
+  }
 
   state.copyState = copied ? 'ok' : 'fail'
   renderChrome()
