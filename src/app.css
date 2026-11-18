@@ -485,12 +485,23 @@ html[data-theme='c'] .win-btn-close:hover {
   color: var(--app-muted);
 }
 
-.head-actions {
+/* 模型：单独一块，靠右推到工具栏右半边 */
+.head-model {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-left: auto;
   flex: 0 0 auto;
+  min-width: 0;
+}
+
+/* 主题 / 设置 / 余额：紧跟模型 */
+.head-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  min-width: 0;
 }
 
 .field-label {
@@ -1899,6 +1910,41 @@ html[data-theme='c'] .toast {
 }
 
 /* ============================================================================
+   中等宽度（901–1180px）：工具栏固定两行分组
+   —— 第一行 语言对 + 模型，第二行 主题 / 设置 / 余额（右对齐）
+   ========================================================================== */
+
+@media (min-width: 901px) and (max-width: 1180px) {
+  .head {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  .lang-pair {
+    flex: 0 1 auto;
+  }
+
+  /* 模型占满第一行剩余空间，贴右边 */
+  .head-model {
+    flex: 1 1 0;
+    justify-content: flex-end;
+    min-width: 0;
+  }
+
+  .model-select {
+    width: auto;
+    min-width: 0;
+    max-width: 220px;
+  }
+
+  /* 100% 基准，强制落到第二行，整体靠右 */
+  .head-tools {
+    flex: 1 1 100%;
+    justify-content: flex-end;
+  }
+}
+
+/* ============================================================================
    紧凑宽度（≤640px）：两行工具栏 + 单列卡片 + 术语折叠成一行
    ========================================================================== */
 
@@ -1929,7 +1975,7 @@ html[data-theme='c'] .toast {
     gap: 4px;
   }
 
-  .head-actions {
+  .head-tools {
     flex: 1 1 100%;
     margin-left: 0;
     flex-wrap: wrap;
@@ -1951,7 +1997,7 @@ html[data-theme='c'] .toast {
   }
 
   .lang-pair .field-label,
-  .head-actions .field-label {
+  .head-tools .field-label {
     display: none;
   }
 
