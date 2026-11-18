@@ -225,7 +225,8 @@ for (const id of [
   'api-key',
   'base-url',
   'save-settings',
-  'settings-hint',
+  'model-status',
+  'model-status-text',
   'model-select',
   'char-count',
   'clear',
@@ -1119,7 +1120,6 @@ async function run() {
   if (config.apiKey.length === 0) {
     state.settingsOpen = true
     renderChrome()
-    el['settings-hint'].textContent = '请先填写 API Key，再翻译。'
     if (typeof el['api-key'].focus === 'function') el['api-key'].focus()
     el['api-key'].focus()
     // 设置面板可能被折叠或滚出视野，再补一条 Toast，避免用户以为按钮没反应
@@ -1331,27 +1331,46 @@ async function refreshModels() {
   if (config.apiKey.length === 0) {
     state.models = []
     renderModels()
-    el['settings-hint'].textContent = '填写 API Key 后会自动读取可用模型。'
+    setModelStatus('idle', '')
     return
   }
 
-  el['settings-hint'].textContent = '正在读取模型列表…'
+  setModelStatus('loading', '正在读取模型列表…')
   try {
     const payload = await invokeTauri('models', { apiKey: config.apiKey, baseURL: config.baseURL })
     if (payload !== null && payload !== undefined && payload.ok === true && Array.isArray(payload.models)) {
       state.models = payload.models
       // 缓存一份，下次启动先用它把下拉框填上，不用等网络
       writeJsonStore(KEYS.models, { list: payload.models, savedAt: Date.now() })
-      el['settings-hint'].textContent =
-        payload.models.length > 0 ? '已读取 ' + payload.models.length + ' 个模型。' : '接口没有返回模型列表，将使用默认模型。'
+      setModelStatus(
+        'ok',
+        payload.models.length > 0
+          ? '已读取 ' + payload.models.length + ' 个模型'
+          : '接口没有返回模型列表，将使用默认模型',
+      )
     } else {
-      el['settings-hint'].textContent =
-        '模型列表读取失败：' + localizeError(payload?.error, '请检查 API Key 和接口地址。')
+      setModelStatus(
+        'fail',
+        '模型列表读取失败：' + localizeError(payload?.error, '请检查 API Key 和接口地址。'),
+      )
     }
   } catch (error) {
-    el['settings-hint'].textContent = '模型列表读取失败：请检查网络后重试。'
+    setModelStatus('fail', '模型列表读取失败：请检查网络后重试。')
   }
   renderModels()
+}
+
+/** 模型列表状态：idle / loading / ok / fail，显示在「接口地址」标签右边 */
+function setModelStatus(kind, text) {
+  const box = el['model-status']
+  if (box === null || box === undefined) return
+  box.hidden = kind === 'idle'
+  box.classList.remove('is-ok', 'is-fail', 'is-loading')
+  if (kind === 'ok') box.classList.add('is-ok')
+  if (kind === 'fail') box.classList.add('is-fail')
+  if (kind === 'loading') box.classList.add('is-loading')
+  el['model-status-text'].textContent = text
+  box.title = kind === 'fail' ? text : ''
 }
 
 /** 启动时先用上次缓存的模型列表渲染，避免下拉框空着 */

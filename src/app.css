@@ -1093,6 +1093,74 @@ html[data-theme='a'] .modal-overlay {
   min-width: 0;
 }
 
+/* 标签 + 模型读取状态同一行 */
+.label-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.model-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  font-size: var(--wa-font-size-xs);
+  color: var(--app-muted);
+}
+
+.model-status .status-icon {
+  display: none;
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+}
+
+.model-status .status-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-status.is-ok {
+  color: var(--wa-color-success-fill-loud, #1f7a4d);
+}
+
+.model-status.is-ok .icon-ok {
+  display: block;
+  stroke: var(--wa-color-success-fill-loud, #1f7a4d);
+}
+
+.model-status.is-fail {
+  color: var(--wa-color-danger-fill-loud, #c2261a);
+}
+
+.model-status.is-fail .icon-fail {
+  display: block;
+  stroke: var(--wa-color-danger-fill-loud, #c2261a);
+}
+
+.model-status.is-loading .icon-loading {
+  display: block;
+  animation: model-spin 0.9s linear infinite;
+  transform-origin: 50% 50%;
+}
+
+.model-status .spinner-track {
+  stroke: var(--app-border);
+}
+
+.model-status .spinner-arc {
+  stroke: currentColor;
+}
+
+@keyframes model-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .field-hint {
   font-size: var(--wa-font-size-xs);
   line-height: 1.5;
@@ -1107,18 +1175,10 @@ html[data-theme='a'] .modal-overlay {
 .modal-foot {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 10px;
   flex: 0 0 auto;
   padding: 10px 16px 16px;
-}
-
-.settings-hint {
-  margin-right: auto;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: var(--wa-font-size-xs);
-  color: var(--app-muted);
 }
 
 .field-key,
