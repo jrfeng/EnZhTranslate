@@ -5,6 +5,39 @@
 
 ---
 
+## run-win-debug.cmd（Windows，一键跑起来）
+
+```
+双击运行，或者在命令行里执行：
+
+    debug\run-win-debug.cmd
+```
+
+**和 build-win-debug.cmd 的区别**：这个脚本构建完会**直接启动**，适合「改两行 → 看效果」的手动测试。
+
+**做什么**
+
+1. 检查 `node` / `cargo`，缺了直接提示退出
+2. 没有 `node_modules` 时先 `npm install`
+3. `npm run build` 构建前端
+4. `cargo build` 构建 debug 版 exe（增量编译，改前端时几乎瞬时）
+5. 如果检测到**正在运行的** `fish-translate.exe` 或 `FishTranslateTest.exe`，会先问一句
+   `Close the running instance(s)? [y/N]`，回 `y` 才继续（回别的就中止，什么都不做）
+6. 复制到 `%LOCALAPPDATA%\Programs\FishTranslateTest\FishTranslateTest.exe` 并启动
+7. **脚本窗口保持等待**：应用关掉之后才继续，打印退出码，有 panic 日志就一并打印出来
+
+**为什么要问一句**
+
+正式版和测试版是同一个应用标识，共用单实例锁。已经在跑的那个会被新实例顶掉，
+所以必须关掉一个——脚本把决定权留给你，避免误杀正在用的窗口。
+
+**注意**
+
+- 脚本窗口**不要提前关**：debug 版的日志和 panic 都打在同一个控制台里
+- 关闭应用窗口后脚本会停住等你按键（方便看退出码），按任意键结束
+- 只影响 `FishTranslateTest` 目录，不会动正式版安装目录
+
+---
 ## build-win-debug.cmd（Windows 测试版）
 
 ```
