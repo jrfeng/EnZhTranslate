@@ -1160,6 +1160,11 @@ html[data-theme='b'] .modal {
   background: var(--app-panel-2);
 }
 
+/* 文字在左、按钮整体贴右：不依赖按钮是否隐藏，未配置时「填写」也能右对齐 */
+.key-managed .key-state {
+  margin-right: auto;
+}
+
 .key-state {
   color: var(--app-text);
   font-size: var(--wa-font-size-s);
@@ -1170,17 +1175,9 @@ html[data-theme='b'] .modal {
   color: var(--app-muted);
 }
 
-.key-managed wa-button {
-  margin-left: auto;
-}
-
 /* 编辑态：按钮不可见但保留占位，保证这一行高度不变 */
 .key-managed.is-editing wa-button {
   visibility: hidden;
-}
-
-.key-managed wa-button + wa-button {
-  margin-left: 0;
 }
 
 /* 一次性输入框：输入 + 保存 / 取消 */
