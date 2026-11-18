@@ -164,7 +164,16 @@ async fn translate(request: TranslateRequest) -> Value {
         return error_json("EMPTY_TRANSLATION", "模型没有返回译文。");
     }
 
-    json!({ "ok": true, "translation": content, "model": model })
+    // 把 usage 一起带回前端：DeepSeek 会给出 prompt/completion/total，
+    // 以及缓存命中 / 未命中两个细分字段；其它兼容服务可能只有前三个。
+    let usage = data.get("usage").cloned().unwrap_or(Value::Null);
+
+    json!({
+        "ok": true,
+        "translation": content,
+        "model": model,
+        "usage": usage
+    })
 }
 
 #[tauri::command]
