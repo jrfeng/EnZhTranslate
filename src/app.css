@@ -993,6 +993,12 @@ html[data-theme='c'] .toggle.on {
   width: 260px;
 }
 
+/* API Key 用 text 输入 + 文字遮蔽，避免 WebView2 把它当密码框弹「保存密码」 */
+wa-input.is-secret::part(input) {
+  -webkit-text-security: disc;
+  letter-spacing: 0.08em;
+}
+
 .hint {
   flex: 0 1 auto;
   min-width: 0;

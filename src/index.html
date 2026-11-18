@@ -65,7 +65,7 @@
           </div>
           <div class="settings-body">
             <span class="field-label">API Key</span>
-            <wa-input id="api-key" type="password" size="s" appearance="outlined" placeholder="sk-…" class="field-key" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false"></wa-input>
+            <wa-input id="api-key" type="text" size="s" appearance="outlined" placeholder="sk-…" class="field-key is-secret" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></wa-input>
             <span class="field-label">接口地址</span>
             <wa-input id="base-url" size="s" appearance="outlined" class="field-url" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></wa-input>
             <wa-button id="save-settings" variant="brand" size="s">保存并读取模型</wa-button>
@@ -141,9 +141,9 @@
               </div>
               <div class="terms-body" id="terms-body">
                 <div class="terms-add">
-                  <wa-input id="term-source" placeholder="术语" aria-label="术语" size="s" appearance="outlined" class="term-field"></wa-input>
+                  <wa-input id="term-source" placeholder="术语" aria-label="术语" size="s" appearance="outlined" class="term-field" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></wa-input>
                   <span class="term-join">翻译成</span>
-                  <wa-input id="term-target" placeholder="译法" aria-label="译法" size="s" appearance="outlined" class="term-field"></wa-input>
+                  <wa-input id="term-target" placeholder="译法" aria-label="译法" size="s" appearance="outlined" class="term-field" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></wa-input>
                   <wa-button id="term-add" variant="brand" size="s" disabled>添加</wa-button>
                 </div>
                 <div class="terms-list" id="terms-list"></div>
