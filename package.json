@@ -2,7 +2,7 @@
   "name": "fish-translate-tauri",
   "private": true,
   "version": "0.7.4",
-  "description": "英译中桌面版（Tauri）",
+  "description": "Fish翻译 · 多语言互译桌面客户端",
   "scripts": {
     "build": "node scripts/build.mjs",
     "tauri": "tauri",
