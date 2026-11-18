@@ -1459,6 +1459,15 @@ html[data-theme='b'] .ctx-menu {
   outline: none;
 }
 
+/* 不可用项：没选中文字时的「剪切 / 复制」 */
+.ctx-item:disabled,
+.ctx-item.is-disabled {
+  color: var(--app-muted);
+  opacity: 0.55;
+  cursor: default;
+  background: transparent;
+}
+
 html[data-theme='c'] .ctx-item,
 html[data-theme='d'] .ctx-item {
   border-radius: 0;

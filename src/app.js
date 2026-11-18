@@ -1388,24 +1388,23 @@ function buildContextItems(region, event) {
   const items = []
 
   if (region === 'source' && input instanceof HTMLTextAreaElement) {
+    const hasSelection = selectionOf(input).length > 0
     items.push({
       label: '剪切',
+      disabled: !hasSelection,
       run: async () => {
-        const selected = selectionOf(input) || input.value
+        const selected = selectionOf(input)
+        if (selected.length === 0) return
         await clipboardWriteText(selected)
-        if (selectionOf(input)) {
-          input.setRangeText('', input.selectionStart, input.selectionEnd, 'start')
-          input.dispatchEvent(new Event('input', { bubbles: true }))
-        } else {
-          input.value = ''
-          input.dispatchEvent(new Event('input', { bubbles: true }))
-        }
+        input.setRangeText('', input.selectionStart, input.selectionEnd, 'start')
+        input.dispatchEvent(new Event('input', { bubbles: true }))
       },
     })
     items.push({
       label: '复制',
+      disabled: !hasSelection,
       run: async () => {
-        await clipboardWriteText(selectionOf(input) || input.value)
+        await clipboardWriteText(selectionOf(input))
       },
     })
     items.push({
@@ -1433,11 +1432,12 @@ function buildContextItems(region, event) {
 
   if (region === 'output') {
     const out = el.output
+    const selectedText = String(window.getSelection ? window.getSelection().toString() : '')
     items.push({
       label: '复制',
+      disabled: selectedText.length === 0,
       run: async () => {
-        const selected = String(window.getSelection ? window.getSelection().toString() : '')
-        await clipboardWriteText(selected.length > 0 ? selected : out.textContent.trim())
+        await clipboardWriteText(selectedText)
       },
     })
     items.push({
@@ -1466,10 +1466,12 @@ function buildContextItems(region, event) {
   }
 
   if (region === 'input' && input !== null) {
+    const hasSelection = selectionOf(input).length > 0
     items.push({
       label: '复制',
+      disabled: !hasSelection,
       run: async () => {
-        await clipboardWriteText(selectionOf(input) || input.value)
+        await clipboardWriteText(selectionOf(input))
       },
     })
     items.push({
@@ -1511,10 +1513,16 @@ function showContextMenu(items, x, y) {
     button.className = 'ctx-item'
     button.setAttribute('role', 'menuitem')
     button.textContent = item.label
-    button.addEventListener('click', () => {
-      hideContextMenu()
-      void item.run()
-    })
+    if (item.disabled === true) {
+      button.disabled = true
+      button.classList.add('is-disabled')
+      button.setAttribute('aria-disabled', 'true')
+    } else {
+      button.addEventListener('click', () => {
+        hideContextMenu()
+        void item.run()
+      })
+    }
     menu.appendChild(button)
   }
 
@@ -1531,13 +1539,13 @@ function showContextMenu(items, x, y) {
   menu.style.top = top + 'px'
 
   // preventScroll：聚焦菜单项时不要让页面滚动，否则会触发 scroll 监听把菜单关掉
-  const first = menu.querySelector('.ctx-item')
+  const first = menu.querySelector('.ctx-item:not(:disabled)')
   if (first !== null) first.focus({ preventScroll: true })
 }
 
 function handleContextMenuKeydown(event) {
   if (!isContextMenuOpen()) return
-  const items = Array.from(el['ctx-menu'].querySelectorAll('.ctx-item'))
+  const items = Array.from(el['ctx-menu'].querySelectorAll('.ctx-item:not(:disabled)'))
   if (items.length === 0) return
   const index = items.indexOf(document.activeElement)
 
