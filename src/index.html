@@ -235,6 +235,19 @@
                 <span class="progress-line-runner"></span>
               </div>
               <div class="output" id="output"></div>
+              <div class="usage-foot" id="usage-foot" hidden>
+                <button type="button" class="usage-chip" id="usage-chip" aria-expanded="false" title="查看本次翻译的 token 用量">
+                  <span id="usage-chip-text">0 tok</span>
+                </button>
+                <div class="usage-pop" id="usage-pop" hidden role="dialog" aria-label="本轮用量">
+                  <div class="usage-pop-head">
+                    <span>本轮用量</span>
+                    <span class="usage-pop-total" id="usage-pop-total">0 tok</span>
+                  </div>
+                  <div class="usage-rows" id="usage-rows"></div>
+                  <div class="usage-pop-foot" id="usage-pop-foot"></div>
+                </div>
+              </div>
             </section>
           </section>
         </main>
