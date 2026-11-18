@@ -1920,6 +1920,13 @@ input,
   -webkit-user-select: text;
 }
 
+/* 占位提示（「译文会显示在这里。」「翻译中…」）不是内容，不要能被划词 */
+#output .placeholder,
+#verify-preview .placeholder {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 /* 右键菜单的标签本身不需要被选中 */
 .ctx-menu,
 .ctx-menu * {
