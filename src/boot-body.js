@@ -45,4 +45,14 @@
   setTimeout(function () {
     document.documentElement.classList.add('app-ready')
   }, 1500)
+
+  /* 兜底：万一 app.js 没跑起来，窗口默认是隐藏的（防白闪），这里强制放出来，
+     否则用户会看到一个「什么都不发生」的进程 */
+  setTimeout(function () {
+    try {
+      window.__TAURI__.core.invoke('app_ready')
+    } catch (error) {
+      /* 不是 Tauri 环境（浏览器里调试）就算了 */
+    }
+  }, 2000)
 })()
