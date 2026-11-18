@@ -993,6 +993,12 @@ html[data-theme='c'] .toggle.on {
   width: 260px;
 }
 
+/* API Key 用 text 输入 + 文字遮蔽，避免 WebView2 把它当密码框弹「保存密码」 */
+wa-input.is-secret::part(input) {
+  -webkit-text-security: disc;
+  letter-spacing: 0.08em;
+}
+
 .hint {
   flex: 0 1 auto;
   min-width: 0;
@@ -1409,6 +1415,62 @@ html[data-theme='b'] .usage-pop {
   padding-top: 8px;
   border-top: var(--app-line) solid var(--app-border);
   color: var(--app-muted);
+}
+
+/* ------------------------------------------------------------ 右键菜单 */
+
+.ctx-menu {
+  position: fixed;
+  z-index: 2000;
+  min-width: 132px;
+  padding: 4px;
+  border: var(--app-line) solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-panel);
+  box-shadow: var(--app-shadow);
+  outline: none;
+}
+
+html[data-theme='a'] .ctx-menu {
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
+}
+
+html[data-theme='b'] .ctx-menu {
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.16);
+}
+
+.ctx-item {
+  display: block;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: calc(var(--app-radius-sm) / 2);
+  background: transparent;
+  color: var(--app-text);
+  font-family: inherit;
+  font-size: var(--wa-font-size-xs);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ctx-item:hover,
+.ctx-item:focus-visible {
+  background: var(--app-panel-2);
+  outline: none;
+}
+
+/* 不可用项：没选中文字时的「剪切 / 复制」 */
+.ctx-item:disabled,
+.ctx-item.is-disabled {
+  color: var(--app-muted);
+  opacity: 0.55;
+  cursor: default;
+  background: transparent;
+}
+
+html[data-theme='c'] .ctx-item,
+html[data-theme='d'] .ctx-item {
+  border-radius: 0;
 }
 
 /* ------------------------------------------------------------ Markdown */
@@ -1834,4 +1896,40 @@ html[data-theme='c'] .toast {
   .theme-select {
     width: 126px;
   }
+}
+
+/* ============================================================================
+   文本选择：桌面应用里不要出现网页那种「拖蓝」
+   —— 只有输入框、译文输出区、校验预览允许划词
+   ========================================================================== */
+
+html,
+body,
+.app {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+textarea,
+input,
+#output,
+#output *,
+#verify-preview,
+#verify-preview * {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* 占位提示（「译文会显示在这里。」「翻译中…」）不是内容，不要能被划词 */
+#output .placeholder,
+#verify-preview .placeholder {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 右键菜单的标签本身不需要被选中 */
+.ctx-menu,
+.ctx-menu * {
+  user-select: none;
+  -webkit-user-select: none;
 }

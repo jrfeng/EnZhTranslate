@@ -5,6 +5,8 @@
  * 术语表、模型选择、自动复制、进度动画，以及把请求发给本机服务。
  */
 
+import { htmlToMarkdown } from './markdown-from-html.js'
+
 /* ------------------------------------------------------------ 常量与状态 */
 
 /** 把致命错误直接显示在页面上，避免出现「一片白」却无从排查 */
@@ -250,6 +252,7 @@ for (const id of [
   'usage-pop-total',
   'usage-rows',
   'usage-pop-foot',
+  'ctx-menu',
 ]) {
   el[id] = document.getElementById(id)
 }
@@ -1322,7 +1325,328 @@ function applyCachedModels() {
 
 /* ---------------------------------------------------------------- 绑定 */
 
+/* ------------------------------------------------------------ 右键菜单 */
+
+/** 右键落点所属的区域：source / output / key / input / none */
+function contextRegion(event) {
+  const path = typeof event.composedPath === 'function' ? event.composedPath() : []
+  let region = 'none'
+  for (const node of path) {
+    if (node === null || node === undefined) continue
+    if (node.id === 'source') return 'source'
+    if (node.id === 'output' || node.id === 'verify-preview') return 'output'
+    if (node.id === 'api-key' || node.id === 'api-key-legacy') return 'key'
+    if (typeof node.tagName !== 'string') continue
+    const tag = node.tagName.toUpperCase()
+    if (tag === 'TEXTAREA') return 'source'
+    if (tag === 'INPUT') {
+      const type = String(node.getAttribute('type') || 'text').toLowerCase()
+      if (type === 'password') return 'key'
+      if (['text', 'search', 'url', 'email', 'number', 'tel'].includes(type)) region = 'input'
+    }
+    if (region === 'none' && node.isContentEditable === true) region = 'input'
+  }
+  return region
+}
+
+/** 取右键落点上真正的输入控件（穿透 Web Awesome 的 shadow DOM） */
+function contextInputElement(event) {
+  const path = typeof event.composedPath === 'function' ? event.composedPath() : []
+  for (const node of path) {
+    if (node === null || node === undefined || typeof node.tagName !== 'string') continue
+    const tag = node.tagName.toUpperCase()
+    if (tag === 'TEXTAREA' || tag === 'INPUT') return node
+  }
+  return null
+}
+
+async function clipboardReadText() {
+  const payload = await invokeTauri('clipboard_read')
+  return payload !== null && payload !== undefined && payload.ok === true && typeof payload.text === 'string'
+    ? payload.text
+    : ''
+}
+
+/** 读剪贴板，返回 { text, html }；html 为空表示来源没有富文本 */
+async function clipboardReadContent() {
+  const payload = await invokeTauri('clipboard_read')
+  const ok = payload !== null && payload !== undefined && payload.ok === true
+  return {
+    text: ok && typeof payload.text === 'string' ? payload.text : '',
+    html: ok && typeof payload.html === 'string' ? payload.html : '',
+  }
+}
+
+/** 把 HTML 片段转成 Markdown；转不动就退回纯文本 */
+function htmlToMarkdownOrText(html, fallbackText) {
+  if (typeof html === 'string' && html.trim().length > 0) {
+    try {
+      const markdown = htmlToMarkdown(html)
+      if (markdown.length > 0) return markdown
+    } catch (error) {
+      /* 解析失败就走纯文本 */
+    }
+  }
+  return fallbackText
+}
+
+function clipboardWriteText(text) {
+  return invokeTauri('clipboard_write', { text })
+}
+
+/** 往 textarea / input 里插入文本，并把光标放到插入内容之后 */
+function insertInto(input, text) {
+  const start = input.selectionStart ?? input.value.length
+  const end = input.selectionEnd ?? input.value.length
+  input.setRangeText(text, start, end, 'end')
+  input.dispatchEvent(new Event('input', { bubbles: true }))
+}
+
+function selectionOf(input) {
+  const start = input.selectionStart ?? 0
+  const end = input.selectionEnd ?? 0
+  return start === end ? '' : input.value.slice(start, end)
+}
+
+function buildContextItems(region, event) {
+  const input = contextInputElement(event)
+  const items = []
+
+  if (region === 'source' && input instanceof HTMLTextAreaElement) {
+    const hasSelection = selectionOf(input).length > 0
+    items.push({
+      label: '剪切',
+      disabled: !hasSelection,
+      run: async () => {
+        const selected = selectionOf(input)
+        if (selected.length === 0) return
+        await clipboardWriteText(selected)
+        input.setRangeText('', input.selectionStart, input.selectionEnd, 'start')
+        input.dispatchEvent(new Event('input', { bubbles: true }))
+      },
+    })
+    items.push({
+      label: '复制',
+      disabled: !hasSelection,
+      run: async () => {
+        await clipboardWriteText(selectionOf(input))
+      },
+    })
+    items.push({
+      label: '粘贴',
+      run: async () => {
+        const { text, html } = await clipboardReadContent()
+        const pasted = htmlToMarkdownOrText(html, text)
+        if (pasted.length > 0) insertInto(input, pasted)
+      },
+    })
+    items.push({
+      label: '粘贴为纯文本',
+      run: async () => {
+        const raw = await clipboardReadText()
+        if (raw.length === 0) return
+        // 统一换行、去掉零宽字符和行尾空白，避免把复制源的排版一起带进来
+        const plain = raw
+          .replace(/\r\n?/g, '\n')
+          .replace(/[\u200b\u200c\u200d\ufeff]/g, '')
+          .split('\n')
+          .map((line) => line.replace(/[ \t]+$/, ''))
+          .join('\n')
+        if (plain.length > 0) insertInto(input, plain)
+      },
+    })
+    items.push({
+      label: '全选',
+      run: () => {
+        input.focus()
+        input.select()
+      },
+    })
+    items.push({
+      label: '图片翻译',
+      run: () => {
+        el['image-input'].click()
+      },
+    })
+    return items
+  }
+
+  if (region === 'output') {
+    const out = el.output
+    const selectedText = String(window.getSelection ? window.getSelection().toString() : '')
+    items.push({
+      label: '复制',
+      disabled: selectedText.length === 0,
+      run: async () => {
+        await clipboardWriteText(selectedText)
+      },
+    })
+    items.push({
+      label: '全选',
+      run: () => {
+        const range = document.createRange()
+        range.selectNodeContents(out)
+        const selection = window.getSelection()
+        if (selection === null) return
+        selection.removeAllRanges()
+        selection.addRange(range)
+      },
+    })
+    return items
+  }
+
+  if (region === 'key') {
+    items.push({
+      label: '粘贴',
+      run: async () => {
+        const text = await clipboardReadText()
+        if (text.length > 0 && input !== null) insertInto(input, text)
+      },
+    })
+    return items
+  }
+
+  if (region === 'input' && input !== null) {
+    const hasSelection = selectionOf(input).length > 0
+    items.push({
+      label: '复制',
+      disabled: !hasSelection,
+      run: async () => {
+        await clipboardWriteText(selectionOf(input))
+      },
+    })
+    items.push({
+      label: '粘贴',
+      run: async () => {
+        const text = await clipboardReadText()
+        if (text.length > 0) insertInto(input, text)
+      },
+    })
+    items.push({
+      label: '全选',
+      run: () => {
+        input.focus()
+        input.select()
+      },
+    })
+    return items
+  }
+
+  return []
+}
+
+function hideContextMenu() {
+  if (el['ctx-menu'] === null || el['ctx-menu'] === undefined) return
+  el['ctx-menu'].hidden = true
+}
+
+function isContextMenuOpen() {
+  return el['ctx-menu'] !== null && el['ctx-menu'] !== undefined && !el['ctx-menu'].hidden
+}
+
+function showContextMenu(items, x, y) {
+  const menu = el['ctx-menu']
+  menu.replaceChildren()
+
+  for (const item of items) {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'ctx-item'
+    button.setAttribute('role', 'menuitem')
+    button.textContent = item.label
+    if (item.disabled === true) {
+      button.disabled = true
+      button.classList.add('is-disabled')
+      button.setAttribute('aria-disabled', 'true')
+    } else {
+      button.addEventListener('click', () => {
+        hideContextMenu()
+        void item.run()
+      })
+    }
+    menu.appendChild(button)
+  }
+
+  menu.hidden = false
+  menu.style.left = '0px'
+  menu.style.top = '0px'
+
+  // 越界时贴边，避免菜单跑到窗口外
+  const rect = menu.getBoundingClientRect()
+  const margin = 8
+  const left = Math.max(margin, Math.min(x, window.innerWidth - rect.width - margin))
+  const top = Math.max(margin, Math.min(y, window.innerHeight - rect.height - margin))
+  menu.style.left = left + 'px'
+  menu.style.top = top + 'px'
+
+  // preventScroll：聚焦菜单项时不要让页面滚动，否则会触发 scroll 监听把菜单关掉
+  const first = menu.querySelector('.ctx-item:not(:disabled)')
+  if (first !== null) first.focus({ preventScroll: true })
+}
+
+function handleContextMenuKeydown(event) {
+  if (!isContextMenuOpen()) return
+  const items = Array.from(el['ctx-menu'].querySelectorAll('.ctx-item:not(:disabled)'))
+  if (items.length === 0) return
+  const index = items.indexOf(document.activeElement)
+
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    hideContextMenu()
+    return
+  }
+  if (event.key === 'ArrowDown') {
+    event.preventDefault()
+    items[(index + 1 + items.length) % items.length].focus()
+    return
+  }
+  if (event.key === 'ArrowUp') {
+    event.preventDefault()
+    items[(index - 1 + items.length) % items.length].focus()
+    return
+  }
+  if (event.key === 'Enter') {
+    event.preventDefault()
+    if (index >= 0) items[index].click()
+  }
+}
+
 function bind() {
+  // Ctrl+V：带格式的内容（网页、Word、Notion 等）先转成 Markdown 再插入；
+  // 纯文本仍然走浏览器原生粘贴，不干预
+  el.source.addEventListener('paste', (event) => {
+    const data = event.clipboardData
+    if (data === null || data === undefined) return
+    const html = data.getData('text/html')
+    if (typeof html !== 'string' || html.trim().length === 0) return
+    event.preventDefault()
+    const pasted = htmlToMarkdownOrText(html, data.getData('text/plain'))
+    if (pasted.length > 0) insertInto(el.source, pasted)
+  })
+
+  // 右键：屏蔽浏览器菜单，改用自绘菜单（样式跟随主题）
+  document.addEventListener('contextmenu', (event) => {
+    // 任何地方都不弹浏览器原生菜单，没有可用项时干脆什么都不弹
+    event.preventDefault()
+    const items = buildContextItems(contextRegion(event), event)
+    if (items.length === 0) {
+      hideContextMenu()
+      return
+    }
+    showContextMenu(items, event.clientX, event.clientY)
+  })
+
+  document.addEventListener('mousedown', (event) => {
+    if (!isContextMenuOpen()) return
+    if (el['ctx-menu'].contains(event.target)) return
+    hideContextMenu()
+  })
+
+  document.addEventListener('keydown', handleContextMenuKeydown)
+
+  window.addEventListener('blur', hideContextMenu)
+  window.addEventListener('resize', hideContextMenu)
+  document.addEventListener('scroll', hideContextMenu, true)
   el['usage-chip'].addEventListener('click', (event) => {
     event.stopPropagation()
     if (isUsagePopOpen()) {
