@@ -6,7 +6,7 @@
 #   ./debug/run-macos-debug.sh --open   构建后交给 Finder 打开（脚本不等待）
 #   ./debug/run-macos-debug.sh --help   看帮助
 #
-# 和 build-macos-debug.sh 的区别：这个脚本构建完会直接启动，适合手动测试。
+# 直接运行构建产物，不复制、不安装。
 #
 
 set -euo pipefail
@@ -45,21 +45,24 @@ if [ ! -d node_modules ]; then
   npm install --no-audit --no-fund
 fi
 
-say "[1/3] Building frontend"
+say "[1/2] Building frontend"
 npm run build
 
-say "[2/3] Building debug .app"
+say "[2/2] Building debug .app"
 npx tauri build --debug --bundles app
 
 APP=$(find src-tauri/target/debug/bundle/macos -maxdepth 1 -name '*.app' -print -quit 2>/dev/null || true)
 [ -n "$APP" ] && [ -d "$APP" ] || fail "Debug .app not found under src-tauri/target/debug/bundle/macos"
+
+BIN="$APP/Contents/MacOS/fish-translate"
+[ -x "$BIN" ] || fail "Executable not found inside the app bundle: $BIN"
 
 # ---- 正在运行的实例会抢单实例锁，先问一句 ----
 running="$(pgrep -x fish-translate 2>/dev/null || true)"
 if [ -n "$running" ]; then
   say "A FishTranslate instance is already running"
   echo "    pid: $running"
-  echo "    Both the release build and the test build share one single-instance lock,"
+  echo "    Both the release build and the debug build share one single-instance lock,"
   echo "    so one of them has to be closed."
   echo
   printf '  Close the running instance(s)? [y/N] '
@@ -77,25 +80,16 @@ if [ -n "$running" ]; then
   esac
 fi
 
-DEST="$HOME/Applications/FishTranslateTest.app"
-say "[3/3] Installing to $DEST"
-mkdir -p "$HOME/Applications"
-rm -rf "$DEST"
-cp -R "$APP" "$DEST"
-
-BIN="$DEST/Contents/MacOS/fish-translate"
-[ -x "$BIN" ] || fail "Executable not found inside the app bundle: $BIN"
-
 if [ "$OPEN_VIA_FINDER" -eq 1 ]; then
-  open "$DEST"
-  echo "  Opened via Finder. The script does not wait in this mode."
+  open "$APP"
+  echo "  Opened $APP via Finder. The script does not wait in this mode."
   exit 0
 fi
 
 echo
 echo "  ------------------------------------------------------------"
-echo "   Running the debug build in this terminal:"
-echo "   logs and panics appear below. Close the app window to stop."
+echo "   Running $BIN"
+echo "   Logs and panics appear below. Close the app window to stop."
 echo "  ------------------------------------------------------------"
 echo
 

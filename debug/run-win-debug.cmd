@@ -26,11 +26,11 @@ if not exist "node_modules" (
   if errorlevel 1 (echo   npm install failed. & pause & exit /b 1)
 )
 
-echo   [1/3] Building frontend ...
+echo   [1/2] Building frontend ...
 call npm run build
 if errorlevel 1 (echo   Frontend build failed. & pause & exit /b 1)
 
-echo   [2/3] Building debug exe ...
+echo   [2/2] Building debug exe ...
 pushd "src-tauri"
 cargo build
 if errorlevel 1 (
@@ -41,6 +41,13 @@ if errorlevel 1 (
 )
 popd
 
+set "EXE=src-tauri\target\debug\fish-translate.exe"
+if not exist "%EXE%" (
+  echo   Executable not found: %EXE%
+  pause
+  exit /b 1
+)
+
 rem ---- running instances share the single-instance lock, ask before killing ----
 set "RUNNING="
 tasklist /fi "imagename eq fish-translate.exe" 2>nul | find /i "fish-translate.exe" >nul && set "RUNNING=1"
@@ -49,13 +56,12 @@ tasklist /fi "imagename eq FishTranslateTest.exe" 2>nul | find /i "FishTranslate
 if defined RUNNING (
   echo.
   echo   A FishTranslate instance is already running:
-  echo     - fish-translate.exe   (release build)
-  echo     - FishTranslateTest.exe (previous test build)
+  echo     - fish-translate.exe   ^(release or debug build^)
+  echo     - FishTranslateTest.exe ^(older test build^)
   echo   Both share the same single-instance lock, so one of them must be closed.
   echo.
   set "ANSWER="
   set /p "ANSWER=  Close the running instance(s)? [y/N] "
-  rem trim: piped input may carry a trailing space
   if /i not "!ANSWER:~0,1!"=="y" (
     echo.
     echo   Cancelled. Nothing was started.
@@ -67,25 +73,16 @@ if defined RUNNING (
   timeout /t 1 /nobreak >nul
 )
 
-set "DEST=%LOCALAPPDATA%\Programs\FishTranslateTest"
-if not exist "%DEST%" mkdir "%DEST%"
-copy /y "src-tauri\target\debug\fish-translate.exe" "%DEST%\FishTranslateTest.exe" >nul
-if errorlevel 1 (
-  echo   Copy failed: %DEST%
-  pause
-  exit /b 1
-)
-
-echo   [3/3] Starting debug build ...
 echo.
 echo   ------------------------------------------------------------
+echo    Running %EXE%
 echo    Debug build console: logs and panics appear in this window.
 echo    Close the app window (or press Ctrl+C here) to stop it.
 echo   ------------------------------------------------------------
 echo.
 
 del /q "%TEMP%\fish-translate-panic.log" >nul 2>nul
-"%DEST%\FishTranslateTest.exe"
+"%EXE%"
 set "CODE=%ERRORLEVEL%"
 
 echo.
