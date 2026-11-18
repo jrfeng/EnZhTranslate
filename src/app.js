@@ -1323,6 +1323,10 @@ function applyCachedModels() {
 /* ---------------------------------------------------------------- 绑定 */
 
 function bind() {
+  // 屏蔽 WebView 的默认右键菜单（后退、刷新、另存为等），桌面应用里用不到
+  document.addEventListener('contextmenu', (event) => {
+    event.preventDefault()
+  })
   el['usage-chip'].addEventListener('click', (event) => {
     event.stopPropagation()
     if (isUsagePopOpen()) {
