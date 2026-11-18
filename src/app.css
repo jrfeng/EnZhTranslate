@@ -1428,6 +1428,31 @@ html[data-theme='b'] .usage-pop {
   color: var(--app-muted);
 }
 
+/* ------------------------------------------------------------ 宽度调试角标 */
+
+#size-badge {
+  position: fixed;
+  left: 10px;
+  bottom: 10px;
+  z-index: 3000;
+  padding: 4px 8px;
+  border: var(--app-line) solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-panel);
+  color: var(--app-text);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  pointer-events: none;
+  opacity: 0.92;
+  box-shadow: var(--app-shadow);
+}
+
+html[data-theme='c'] #size-badge,
+html[data-theme='d'] #size-badge {
+  box-shadow: 3px 3px 0 var(--app-border);
+}
+
 /* ------------------------------------------------------------ 右键菜单 */
 
 .ctx-menu {
@@ -1997,6 +2022,7 @@ html[data-theme='c'] .toast {
   }
 
   .lang-pair .field-label,
+  .head-model .field-label,
   .head-tools .field-label {
     display: none;
   }

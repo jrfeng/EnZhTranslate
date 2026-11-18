@@ -1616,6 +1616,51 @@ function handleContextMenuKeydown(event) {
   }
 }
 
+/* ------------------------------------------------------------ 宽度调试角标 */
+
+/** 当前宽度落在哪个断点，方便肉眼确认布局 */
+function breakpointLabel(width) {
+  if (width <= 420) return '手机'
+  if (width <= 640) return '紧凑'
+  if (width <= 900) return '单列'
+  if (width <= 1180) return '两行分组'
+  return '宽屏'
+}
+
+function renderSizeBadge() {
+  const badge = document.getElementById('size-badge')
+  if (badge === null) return
+  const width = Math.round(window.innerWidth)
+  const height = Math.round(window.innerHeight)
+  badge.textContent = width + ' × ' + height + ' · ' + breakpointLabel(width)
+}
+
+/**
+ * 宽度调试角标：Ctrl+Shift+D 开关（默认关闭，纯测试用）
+ * 显示当前窗口尺寸和命中的断点
+ */
+function initSizeBadge() {
+  const enabled = readStore('fish-app.debug-size') === '1'
+
+  const badge = document.createElement('div')
+  badge.id = 'size-badge'
+  badge.hidden = !enabled
+  badge.setAttribute('aria-hidden', 'true')
+  document.body.appendChild(badge)
+  renderSizeBadge()
+
+  window.addEventListener('resize', renderSizeBadge)
+
+  document.addEventListener('keydown', (event) => {
+    if (event.ctrlKey !== true || event.shiftKey !== true) return
+    if (String(event.key).toLowerCase() !== 'd') return
+    event.preventDefault()
+    badge.hidden = !badge.hidden
+    writeStore('fish-app.debug-size', badge.hidden ? '0' : '1')
+    renderSizeBadge()
+  })
+}
+
 function bind() {
   // Ctrl+V：带格式的内容（网页、Word、Notion 等）先转成 Markdown 再插入；
   // 纯文本仍然走浏览器原生粘贴，不干预
@@ -2418,6 +2463,7 @@ el['base-url'].value = config.baseURL === DEFAULT_BASE_URL ? '' : config.baseURL
 el['base-url'].placeholder = DEFAULT_BASE_URL
 el.source.value = state.input
 bind()
+initSizeBadge()
 renderAll()
 syncHighlight()
 if (config.apiKey.length > 0) {
