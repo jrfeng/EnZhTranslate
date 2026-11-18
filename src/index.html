@@ -3,32 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost https://ipc.localhost; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'" />
     <title>Fish翻译</title>
     <link rel="stylesheet" href="/styles/themes/default.css" />
     <link rel="stylesheet" href="/app.css" />
-    <script>
-      // 首屏前先把主题挂上，避免深色主题下闪一下白屏
-      ;(function () {
-        try {
-          var saved = localStorage.getItem('fish-app.theme')
-          var id = saved === 'a' || saved === 'b' || saved === 'c' || saved === 'd' ? saved : null
-          if (!id) id = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'a' : 'b'
-          document.documentElement.dataset.theme = id
-          if (id === 'a') document.documentElement.classList.add('wa-dark')
-        } catch (error) {}
-
-        // 标记平台：macOS 用系统红绿灯，Windows 用自绘按钮
-        try {
-          var ua = navigator.userAgent || ''
-          var platform = /Macintosh|Mac OS X/i.test(ua)
-            ? 'mac'
-            : /Linux/i.test(ua)
-              ? 'linux'
-              : 'win'
-          document.documentElement.dataset.platform = platform
-        } catch (error) {}
-      })()
-    </script>
+    <script src="/boot-head.js"></script>
   </head>
   <body>
     <div class="app">
@@ -77,52 +56,7 @@
           </div>
         </header>
 
-        <script>
-          /* 余额是异步读回来的，但占位必须在首帧之前就位，否则工具栏会跳一下。
-             这里在解析阶段读一次本地配置：有缓存就先把上次的余额摆上，
-             没有缓存就摆「余额 --」，等 app.js 跑起来后再用最新数据替换。 */
-          (function () {
-            try {
-              var raw = localStorage.getItem('fish-app.settings')
-              var settings = raw ? JSON.parse(raw) : {}
-              var base = String(settings.baseURL || 'https://api.deepseek.com')
-              var isDeepSeek = base.indexOf('deepseek.com') !== -1
-              if (!settings.apiKey || !isDeepSeek) return
-
-              var wrap = document.getElementById('balance-wrap')
-              var tag = document.getElementById('balance')
-              var divider = document.getElementById('balance-divider')
-
-              var cached = null
-              try {
-                cached = JSON.parse(localStorage.getItem('fish-app.balance') || 'null')
-              } catch (error) {
-                cached = null
-              }
-
-              if (cached && typeof cached.text === 'string' && cached.text.length > 0) {
-                tag.textContent = cached.text
-                tag.title = cached.title || '（点击刷新）'
-                if (cached.variant) tag.variant = cached.variant
-                tag.classList.remove('is-placeholder')
-              } else {
-                tag.textContent = '余额 --'
-                tag.classList.add('is-placeholder')
-                tag.title = '正在读取余额…'
-              }
-
-              wrap.hidden = false
-              divider.hidden = false
-            } catch (error) {
-              /* 配置读不出来就当作没有余额 */
-            }
-          })()
-
-          /* 兜底：万一组件升级卡住，1.5 秒后也把界面放出来，别让窗口一直空白 */
-          setTimeout(function () {
-            document.documentElement.classList.add('app-ready')
-          }, 1500)
-        </script>
+        <script src="/boot-body.js"></script>
 
         <section class="card settings" id="settings" hidden>
           <div class="card-head">

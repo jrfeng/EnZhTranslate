@@ -21,7 +21,7 @@ await build({
   logLevel: 'info',
 })
 
-for (const file of ['index.html', 'app.css']) {
+for (const file of ['index.html', 'app.css', 'boot-head.js', 'boot-body.js']) {
   await copyFile(join(src, file), join(out, file))
 }
 
