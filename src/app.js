@@ -83,8 +83,6 @@ const KEYS = {
   balance: 'fish-app.balance',
 }
 
-/** 紧凑宽度（手机 / 窄窗口）：术语默认折叠、控件走触控尺寸 */
-const COMPACT_QUERY = window.matchMedia('(max-width: 640px)')
 
 /** 可选的源/目标语言：只收 DeepSeek 表现稳定的语种，中英排最前 */
 const LANGS = [
@@ -652,9 +650,7 @@ function loadPersisted() {
 
   state.autoCopy = readStore(KEYS.autoCopy) === '1'
   state.immediate = readStore(KEYS.immediate) === '1'
-  // 紧凑宽度（手机 / 窄窗口）默认把术语折叠成一行，展开状态仍按用户的选择记住
-  const savedTermsOpen = readStore(KEYS.termsOpen)
-  state.termsOpen = savedTermsOpen === null ? !COMPACT_QUERY.matches : savedTermsOpen !== '0'
+  state.termsOpen = readStore(KEYS.termsOpen) !== '0'
   // 译文视图不持久化：每次启动都是「预览」
   state.view = 'preview'
   removeStore(KEYS.view)
@@ -1618,21 +1614,12 @@ function handleContextMenuKeydown(event) {
 
 /* ------------------------------------------------------------ 宽度调试角标 */
 
-/** 当前宽度落在哪个断点，方便肉眼确认布局 */
-function breakpointLabel(width) {
-  if (width <= 420) return '手机'
-  if (width <= 640) return '紧凑'
-  if (width <= 900) return '单列'
-  if (width <= 1180) return '两行分组'
-  return '宽屏'
-}
-
 function renderSizeBadge() {
   const badge = document.getElementById('size-badge')
   if (badge === null) return
   const width = Math.round(window.innerWidth)
   const height = Math.round(window.innerHeight)
-  badge.textContent = width + ' × ' + height + ' · ' + breakpointLabel(width)
+  badge.textContent = width + ' × ' + height
 }
 
 /**
