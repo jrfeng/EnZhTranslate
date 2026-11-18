@@ -1908,9 +1908,7 @@ html[data-theme='c'] .toast {
 
 /* ---------------------------------------------------------------- 响应式*/
 
-/* DISABLED: @media (max-width: 900px) { -- remove this comment pair to restore */
-/*
-@media (max-width: 900px) {
+@media (min-width: 100000px) { /* DISABLED: was @media (max-width: 900px) */
   .workspace {
     padding: 10px;
   }
@@ -1935,16 +1933,13 @@ html[data-theme='c'] .toast {
     width: 126px;
   }
 }
-*/
 
 /* ============================================================================
    中等宽度（901–1180px）：工具栏固定两行分组
    —— 第一行 语言对 + 模型，第二行 主题 / 设置 / 余额（右对齐）
    ========================================================================== */
 
-/* DISABLED: @media (min-width: 901px) and (max-width: 1180px) { -- remove this comment pair to restore */
-/*
-@media (min-width: 901px) and (max-width: 1180px) {
+@media (min-width: 100000px) { /* DISABLED: was @media (min-width: 901px) and (max-width: 1180px) */
   .head {
     flex-wrap: wrap;
     row-gap: 8px;
@@ -1973,7 +1968,6 @@ html[data-theme='c'] .toast {
     justify-content: flex-end;
   }
 }
-*/
 
 /* ============================================================================
    紧凑宽度（≤640px）：两行工具栏 + 单列卡片 + 术语折叠成一行
