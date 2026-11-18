@@ -1046,60 +1046,153 @@ html[data-theme='b'] .modal {
   color: var(--app-text);
 }
 
-.settings-modal .settings-body {
-  padding: 6px 16px 14px;
-}
-
+.settings-modal 
+/* 弹窗底部操作栏：左侧状态、右侧按钮，顶部分隔一条细线 */
 .modal-foot {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
-  gap: 8px;
-  padding: 10px 16px 14px;
+  gap: 10px;
+  padding: 18px;
 }
 
-.settings-body {
+/* 设置弹窗里的表单：每个字段独占一行，标签在上、输入在下 */
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 6px 18px 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field-label {
+  color: var(--app-muted);
+  font-size: var(--wa-font-size-xs);
+  font-weight: var(--app-label-weight);
+}
+
+.field-hint {
+  color: var(--app-muted);
+  font-size: var(--wa-font-size-xs);
+  line-height: 1.5;
+}
+
+/* 标签 + 模型读取状态同一行：标签加粗，状态常规字重 */
+.label-row {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: 10px;
-  padding: 0;
+  min-width: 0;
 }
 
-.settings-hint {
-  flex: 1 0 100%;
-  margin-bottom: 2px;
-  color: var(--app-muted);
-  font-size: var(--wa-font-size-xs);
-}
-
-/* API Key：Windows 下只显示尾号 + 按钮，输入框一次性 */
-.key-managed {
+.model-status {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
+  min-width: 0;
+  font-size: var(--wa-font-size-xs);
+  font-weight: 400;
+  color: var(--app-muted);
+}
+
+.model-status .status-icon {
+  display: none;
+  width: 12px;
+  height: 12px;
   flex: 0 0 auto;
 }
 
-.key-state {
-  font-size: var(--wa-font-size-xs);
-  color: var(--app-muted);
-  font-variant-numeric: tabular-nums;
+.model-status .status-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.key-state.is-set {
-  color: var(--app-text);
+.model-status.is-ok {
+  color: var(--wa-color-success-fill-loud, #1f7a4d);
 }
 
-.key-edit {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex: 0 0 auto;
+.model-status.is-ok .icon-ok {
+  display: block;
+  stroke: var(--wa-color-success-fill-loud, #1f7a4d);
+}
+
+.model-status.is-fail {
+  color: var(--wa-color-danger-fill-loud, #c2261a);
+}
+
+.model-status.is-fail .icon-fail {
+  display: block;
+  stroke: var(--wa-color-danger-fill-loud, #c2261a);
+}
+
+.model-status.is-loading .icon-loading {
+  display: block;
+  stroke: var(--app-muted);
+  animation: model-spin 0.9s linear infinite;
+  transform-origin: 50% 50%;
+}
+
+@keyframes model-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .field-key,
 .field-url {
-  width: 260px;
+  width: 100%;
+}
+
+/* 已配置状态：一行只读信息 + 右侧按钮 */
+.key-managed {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border: var(--app-line) solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-panel-2);
+}
+
+.key-state {
+  color: var(--app-text);
+  font-size: var(--wa-font-size-s);
+  font-variant-numeric: tabular-nums;
+}
+
+.key-state:not(.is-set) {
+  color: var(--app-muted);
+}
+
+.key-managed wa-button {
+  margin-left: auto;
+}
+
+.key-managed wa-button + wa-button {
+  margin-left: 0;
+}
+
+/* 一次性输入框：输入 + 保存 / 取消 */
+.key-edit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.key-edit .field-key {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.settings-form .field-key,
+.settings-form .field-url {
+  width: 100%;
 }
 
 .hint {
