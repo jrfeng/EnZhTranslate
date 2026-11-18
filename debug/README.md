@@ -38,6 +38,36 @@
 - 只影响 `FishTranslateTest` 目录，不会动正式版安装目录
 
 ---
+## run-macos-debug.sh（macOS，一键跑起来）
+
+```
+chmod +x debug/run-macos-debug.sh      # 首次需要
+./debug/run-macos-debug.sh             # 构建 + 启动，脚本留在前台等应用退出
+./debug/run-macos-debug.sh --open      # 构建后用 Finder 打开（脚本不等待）
+./debug/run-macos-debug.sh --help      # 看帮助
+```
+
+**和 `build-win-debug.cmd` 对等**，流程一样，只是平台不同：
+
+1. 校验系统是 macOS、`node` / `cargo` 可用
+2. 没有 `node_modules` 时先 `npm install`
+3. `npm run build` 构建前端
+4. `npx tauri build --debug --bundles app` 构建 debug `.app`
+5. 用 `pgrep -x fish-translate` 检测正在运行的实例，有的话问一句
+   `Close the running instance(s)? [y/N]`，回 `y` 才 `pkill` 掉，其它回答直接中止
+6. 复制到 `~/Applications/FishTranslateTest.app`
+7. 直接跑包里的可执行文件（`Contents/MacOS/fish-translate`），**日志打在同一个终端**
+8. 应用退出后打印退出码，有 panic 日志就打印，最后等你按回车
+
+**注意**
+
+- 只有 `--open` 模式不等待（Finder 托管），其它模式脚本一直占着终端，方便看日志
+- 测试版装在 `~/Applications`（用户级），不碰 `/Applications` 里的正式版
+- 未签名，首次打开若被 Gatekeeper 拦，右键「打开」
+- 同一个应用标识，正式版在跑时脚本会先问再杀
+
+---
+
 ## build-win-debug.cmd（Windows 测试版）
 
 ```
@@ -103,7 +133,7 @@ src-tauri/target/debug/bundle/macos/Fish翻译.app
 
 | 场景 | 用哪个 |
 |---|---|
-| 改了界面/逻辑，想在本机快速看效果 | `build-win-debug.cmd`（Windows） / `build-macos-debug.sh`（macOS） |
+| 改了界面/逻辑，想在本机快速看效果并直接运行 | `run-win-debug.cmd`（Windows） / `run-macos-debug.sh`（macOS） |
 | 要看 Rust 侧日志、排查 panic | 同上，debug 版会保留控制台 |
 | 要给别人安装包 / 发版 | 根目录的 `build-*.cmd/sh`，产物进 `build/` |
 

@@ -16,7 +16,7 @@ OPEN=0
 for arg in "$@"; do
   case "$arg" in
     --open) OPEN=1 ;;
-    -h|--help) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) awk 'NR>1 && /^#/ { sub(/^# ?/, ""); print; next } NR>1 { exit }' "$0"; exit 0 ;;
     *) echo "未知参数：$arg（可用：--open / --help）" >&2; exit 1 ;;
   esac
 done

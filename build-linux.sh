@@ -18,7 +18,7 @@ for arg in "$@"; do
     --deb) ONLY="deb" ;;
     --appimage) ONLY="appimage" ;;
     -h|--help)
-      sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//'
+      awk 'NR>1 && /^#/ { sub(/^# ?/, ""); print; next } NR>1 { exit }' "$0"
       exit 0
       ;;
     *)
