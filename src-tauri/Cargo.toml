@@ -1,6 +1,6 @@
 [package]
 name = "fish-translate"
-version = "0.7.2"
+version = "0.7.3"
 description = "Multi-language translator"
 edition = "2021"
 license = "MIT"
