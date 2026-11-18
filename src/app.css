@@ -1899,6 +1899,191 @@ html[data-theme='c'] .toast {
 }
 
 /* ============================================================================
+   紧凑宽度（≤640px）：两行工具栏 + 单列卡片 + 术语折叠成一行
+   ========================================================================== */
+
+@media (max-width: 640px) {
+  .workspace {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .titlebar {
+    height: 32px;
+    padding-left: 10px;
+  }
+
+  .win-btn {
+    width: 36px;
+  }
+
+  /* 工具栏拆两行：语言对一行，模型/主题/设置/余额一行 */
+  .head {
+    gap: 8px;
+    row-gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .lang-pair {
+    flex: 1 1 100%;
+    gap: 4px;
+  }
+
+  .head-actions {
+    flex: 1 1 100%;
+    margin-left: 0;
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  /* 控件都允许被压缩，避免横向溢出 */
+  .lang-select,
+  .model-select,
+  .theme-select {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .theme-select {
+    flex: 0 0 96px;
+  }
+
+  .lang-pair .field-label,
+  .head-actions .field-label {
+    display: none;
+  }
+
+  .toolbar-divider {
+    display: none;
+  }
+
+  /* 单列：原文与译文各占一半，术语排到最后并默认折叠 */
+  .grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: hidden;
+  }
+
+  /* 让左列的两个卡片直接参与纵向排列，这样术语能被排到译文之后 */
+  .col:first-child {
+    display: contents;
+  }
+
+  .col:first-child > .card-grow {
+    order: 1;
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  .col:last-child {
+    order: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+    flex: 1 1 0;
+  }
+
+  .card.terms {
+    order: 3;
+    flex: 0 0 auto;
+  }
+
+  .card-head {
+    gap: 6px;
+    padding: 0 10px;
+    min-height: 36px;
+  }
+
+  .card-meta {
+    gap: 6px;
+  }
+
+  .editor {
+    padding: 10px 12px;
+  }
+
+  .output {
+    padding: 10px 12px;
+  }
+
+  .settings-body {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .field-key,
+  .field-url {
+    width: 100%;
+  }
+}
+
+/* ============================================================================
+   手机宽度（≤420px）：标题栏极简 + 翻译改为右下悬浮按钮 + 触控尺寸
+   ========================================================================== */
+
+@media (max-width: 420px) {
+  .titlebar-title {
+    display: none;
+  }
+
+  /* 模型单独占一行，主题/设置/余额落到下一行，避免模型名被压成「d」 */
+  .model-select {
+    flex: 1 1 100%;
+  }
+
+  .theme-select {
+    flex: 1 1 0;
+  }
+
+  .workspace {
+    padding: 6px 6px 78px;
+  }
+
+  /* 翻译按钮脱离工具栏，悬浮在右下角 */
+  #translate {
+    position: fixed;
+    right: 14px;
+    bottom: 14px;
+    z-index: 60;
+  }
+
+  #translate::part(button) {
+    min-height: 46px;
+    padding: 0 20px;
+    border-radius: 23px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+  }
+
+  /* 触控尺寸：主要按钮至少 38px 高 */
+  .card-meta wa-button::part(button),
+  .settings-body wa-button::part(button) {
+    min-height: 38px;
+    padding: 0 12px;
+  }
+
+  .card-head {
+    min-height: 40px;
+  }
+
+  .card-meta .count,
+  .card-meta .ocr-status {
+    font-size: 11px;
+  }
+
+  .ctx-menu {
+    min-width: 140px;
+  }
+
+  .ctx-item {
+    padding: 10px 12px;
+  }
+}
+
+/* ============================================================================
    文本选择：桌面应用里不要出现网页那种「拖蓝」
    —— 只有输入框、译文输出区、校验预览允许划词
    ========================================================================== */

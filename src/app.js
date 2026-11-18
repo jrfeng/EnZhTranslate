@@ -83,6 +83,9 @@ const KEYS = {
   balance: 'fish-app.balance',
 }
 
+/** 紧凑宽度（手机 / 窄窗口）：术语默认折叠、控件走触控尺寸 */
+const COMPACT_QUERY = window.matchMedia('(max-width: 640px)')
+
 /** 可选的源/目标语言：只收 DeepSeek 表现稳定的语种，中英排最前 */
 const LANGS = [
   '简体中文',
@@ -649,7 +652,9 @@ function loadPersisted() {
 
   state.autoCopy = readStore(KEYS.autoCopy) === '1'
   state.immediate = readStore(KEYS.immediate) === '1'
-  state.termsOpen = readStore(KEYS.termsOpen) !== '0'
+  // 紧凑宽度（手机 / 窄窗口）默认把术语折叠成一行，展开状态仍按用户的选择记住
+  const savedTermsOpen = readStore(KEYS.termsOpen)
+  state.termsOpen = savedTermsOpen === null ? !COMPACT_QUERY.matches : savedTermsOpen !== '0'
   // 译文视图不持久化：每次启动都是「预览」
   state.view = 'preview'
   removeStore(KEYS.view)
