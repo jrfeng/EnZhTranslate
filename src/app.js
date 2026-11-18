@@ -1323,14 +1323,21 @@ function applyCachedModels() {
 /* ---------------------------------------------------------------- 绑定 */
 
 /**
- * 判断右键是否落在可输入的控件上（含 Web Awesome 组件 shadow DOM 里的原生 input）。
- * 落在这里就放行浏览器菜单，方便用系统菜单里的「粘贴」。
+ * 判断右键是否落在可输入 / 可复制的区域上（含 Web Awesome 组件 shadow DOM 里的原生 input）：
+ * - 输入框、文本域、contenteditable：放行，方便用系统菜单粘贴
+ * - 译文输出区、校验预览区：放行，方便用系统菜单复制
+ * 其它地方一律屏蔽浏览器的右键菜单。
  */
 function isEditableTarget(event) {
   const path = typeof event.composedPath === 'function' ? event.composedPath() : []
   const TEXT_TYPES = new Set(['text', 'password', 'search', 'url', 'email', 'number', 'tel'])
   for (const node of path) {
-    if (node === null || node === undefined || typeof node.tagName !== 'string') continue
+    if (node === null || node === undefined) continue
+
+    // 译文 / 预览区：允许右键复制
+    if (node.id === 'output' || node.id === 'verify-preview') return true
+
+    if (typeof node.tagName !== 'string') continue
     const tag = node.tagName.toUpperCase()
     if (tag === 'TEXTAREA') return true
     if (tag === 'INPUT') {
