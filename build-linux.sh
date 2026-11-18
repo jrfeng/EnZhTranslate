@@ -96,8 +96,19 @@ done
 
 # 统一收集到仓库根目录的 build/（已在 .gitignore 中排除）
 mkdir -p build
-find "$BUNDLE_DIR" -maxdepth 2 \( -name '*.deb' -o -name '*.AppImage' \) -exec cp -f {} build/ \; 2>/dev/null
+for kind in deb appimage; do
+  case "$kind" in
+    deb) pattern='*.deb' ;;
+    appimage) pattern='*.AppImage' ;;
+  esac
+  newest=$(find "$BUNDLE_DIR/$kind" -maxdepth 1 -name "$pattern" 2>/dev/null | ls -t 2>/dev/null | head -n1 || true)
+  if [ -n "$newest" ]; then
+    rm -f build/$pattern
+    cp -f "$newest" build/
+  fi
+done
 echo "    已复制到 ./build/"
+ls -1 build 2>/dev/null | sed 's/^/    /'
 
 cat <<'TIP'
 
