@@ -1415,6 +1415,21 @@ function buildContextItems(region, event) {
       },
     })
     items.push({
+      label: '粘贴为纯文本',
+      run: async () => {
+        const raw = await clipboardReadText()
+        if (raw.length === 0) return
+        // 统一换行、去掉零宽字符和行尾空白，避免把复制源的排版一起带进来
+        const plain = raw
+          .replace(/\r\n?/g, '\n')
+          .replace(/[\u200b\u200c\u200d\ufeff]/g, '')
+          .split('\n')
+          .map((line) => line.replace(/[ \t]+$/, ''))
+          .join('\n')
+        if (plain.length > 0) insertInto(input, plain)
+      },
+    })
+    items.push({
       label: '全选',
       run: () => {
         input.focus()
