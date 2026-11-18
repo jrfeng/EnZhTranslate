@@ -611,24 +611,22 @@ wa-select::part(expand-icon) {
   font-variant-numeric: tabular-nums;
 }
 
+/* 卡片底部一栏：「原文」面板的字符数放在左下角 */
+.card-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 2px 14px 10px;
+}
+
 .stale {
   font-size: var(--wa-font-size-xs);
   color: var(--wa-color-danger-fill-loud, #c2261a);
 }
 
 /* 图片识别状态提示*/
-.ocr-status {
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: var(--wa-font-size-xs);
-  color: var(--app-muted);
-}
 
-.ocr-status.error {
-  color: var(--wa-color-danger-fill-loud, #c2261a);
-}
 
 /* 已选图片的预览条*/
 .image-preview {

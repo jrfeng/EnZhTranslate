@@ -157,7 +157,6 @@ const state = {
   ocrBusy: false,
   /** 用户点击余额手动刷新时显示进度条 */
   balanceBusy: false,
-  ocrMessage: '',
   ocrError: false,
   /** 这张图是否已经跑过一次 OCR（跑过才显示「刷新」按钮） */
   ocrDone: false,
@@ -191,7 +190,6 @@ for (const id of [
   'target-lang',
   'pick-image',
   'image-input',
-  'ocr-status',
   'ocr-progress',
   'image-preview',
   'image-thumb',
@@ -712,9 +710,6 @@ function renderChrome() {  const loading = state.phase === 'loading'
   el['image-refresh'].hidden = !state.ocrDone
   el['image-refresh'].disabled = ocrBusy || loading
   el['image-refresh'].classList.toggle('is-spinning', ocrBusy)
-  el['ocr-status'].hidden = state.ocrMessage.length === 0
-  el['ocr-status'].textContent = state.ocrMessage
-  el['ocr-status'].classList.toggle('error', state.ocrError)
 
   el['image-preview'].hidden = state.image === null
   if (state.image !== null) {
@@ -1899,7 +1894,6 @@ function bind() {
     state.translatedModel = ''
     state.translatedSource = ''
     state.translatedTarget = ''
-    state.ocrMessage = ''
     state.ocrError = false
     el.source.value = ''
     clearImage()
@@ -2035,36 +2029,6 @@ function bind() {
 
 /** 单张图片上限，超过直接拒绝（OCR 接口本身允许 100 MiB，但上传很慢） */
 const OCR_MAX_BYTES = 20 * 1024 * 1024
-
-function setOcrStatus(message, isError = false) {
-  state.ocrMessage = message
-  state.ocrError = isError
-  renderChrome()
-}
-
-/** 识别期间每秒更新一次已用时间，避免长时间没有反馈 */
-let ocrTicker = 0
-
-function startOcrTicker() {
-  const startedAt = Date.now()
-  stopOcrTicker()
-  ocrTicker = window.setInterval(() => {
-    if (!state.ocrBusy) {
-      stopOcrTicker()
-      return
-    }
-    const seconds = Math.floor((Date.now() - startedAt) / 1000)
-    state.ocrMessage = '正在识别图片… ' + seconds + 's'
-    el['ocr-status'].textContent = state.ocrMessage
-  }, 1000)
-}
-
-function stopOcrTicker() {
-  if (ocrTicker !== 0) {
-    window.clearInterval(ocrTicker)
-    ocrTicker = 0
-  }
-}
 
 /** 文件读成 base64（去掉 data: 前缀） */
 function fileToBase64(file) {
@@ -2273,7 +2237,6 @@ function ocrErrorMessage(error) {
 
 /** OCR 出错：行内状态 + Toast 一起提示 */
 function ocrFail(message) {
-  setOcrStatus(message, true)
   showToast(message)
 }
 
@@ -2303,8 +2266,8 @@ async function runOcr(dataUrl, name, mime) {
   }
 
   state.ocrBusy = true
-  setOcrStatus('正在识别图片…')
-  startOcrTicker()
+  // 进度条靠 renderChrome 里的 ocr-progress 控制，这里是唯一的触发点
+  renderChrome()
 
   const payload = await invokeTauri('ocr', {
     apiKey: config.apiKey,
@@ -2315,7 +2278,8 @@ async function runOcr(dataUrl, name, mime) {
   })
 
   state.ocrBusy = false
-  stopOcrTicker()
+  // 出错时下面会提前 return，所以先收掉进度条
+  renderChrome()
   // 请求有结果了（成功或失败都算），此时才显示「刷新」
   state.ocrDone = true
 
@@ -2326,7 +2290,6 @@ async function runOcr(dataUrl, name, mime) {
 
   const recognized = cleanupOcrText(payload.text)
   if (recognized.length === 0) {
-    setOcrStatus('没有识别到文字', true)
     showToast('没有识别到文字，换一张更清晰的图片试试。')
     return
   }
@@ -2334,7 +2297,6 @@ async function runOcr(dataUrl, name, mime) {
   el.source.value = recognized
   state.input = recognized
   syncHighlight()
-  setOcrStatus('')
   render()
 
   if (state.immediate) void run()
