@@ -186,7 +186,8 @@ for (const id of [
   'settings-toggle',
   'settings-dot',
   'close-settings',
-  'settings',
+  'settings-overlay',
+  'settings-x',
   'balance',
   'balance-wrap',
   'balance-progress',
@@ -878,7 +879,7 @@ function renderChrome() {  const loading = state.phase === 'loading'
   el['immediate'].setAttribute('aria-checked', String(state.immediate))
   el['immediate'].classList.toggle('on', state.immediate)
 
-  el.settings.hidden = !state.settingsOpen
+  el['settings-overlay'].hidden = !state.settingsOpen
   el['settings-toggle'].setAttribute('aria-expanded', String(state.settingsOpen))
   el['settings-dot'].hidden = hasApiKey()
 
@@ -1216,9 +1217,11 @@ async function run() {
 
   if (!hasApiKey()) {
     state.settingsOpen = true
+    // 需要填写 Key：直接把一次性输入框露出来并聚焦
+    if (state.keySupported) openKeyEdit()
     renderChrome()
     el['settings-hint'].textContent = '请先填写 API Key，再翻译。'
-    el['api-key'].focus()
+    if (!state.keySupported) el['api-key-legacy'].focus()
     // 设置面板可能被折叠或滚出视野，再补一条 Toast，避免用户以为按钮没反应
     showToast('未提供 API Key，请提供后再翻译。', 'warn')
     return
@@ -1747,6 +1750,20 @@ function bind() {
       event.preventDefault()
       void saveApiKey()
     }
+  })
+
+  // 设置弹窗：右上角 ×、点遮罩、Esc 都能关
+  const closeSettings = () => {
+    if (!state.settingsOpen) return
+    state.settingsOpen = false
+    renderChrome()
+  }
+  el['settings-x'].addEventListener('click', closeSettings)
+  el['settings-overlay'].addEventListener('click', (event) => {
+    if (event.target === el['settings-overlay']) closeSettings()
+  })
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && state.settingsOpen) closeSettings()
   })
 
   el['save-settings'].addEventListener('click', () => {

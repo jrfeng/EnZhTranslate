@@ -975,9 +975,86 @@ html[data-theme='c'] .toggle.on {
 
 /* ---------------------------------------------------------------- 设置 */
 
-.settings .card-head {
-  border-bottom: 0;
-  padding-bottom: 0;
+/* 通用弹窗（设置）：遮罩 + 面板，样式跟随主题 */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.modal {
+  display: flex;
+  flex-direction: column;
+  width: min(600px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: hidden;
+  border: var(--app-line) solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-panel);
+  box-shadow: var(--app-shadow);
+}
+
+html[data-theme='a'] .modal {
+  box-shadow: 0 26px 64px rgba(0, 0, 0, 0.62);
+}
+
+html[data-theme='b'] .modal {
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.16);
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px 8px;
+}
+
+.modal-title {
+  font-family: var(--wa-font-family-heading);
+  font-size: var(--wa-font-size-s);
+  font-weight: var(--app-label-weight);
+  color: var(--app-text);
+}
+
+.modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin-left: auto;
+  padding: 0;
+  border: var(--app-line) solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-panel);
+  color: var(--app-muted);
+  cursor: pointer;
+}
+
+.modal-close svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.2;
+}
+
+.modal-close:hover {
+  color: var(--app-text);
+}
+
+.settings-modal .settings-body {
+  padding: 6px 16px 14px;
+}
+
+.modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 16px 14px;
 }
 
 .settings-body {
@@ -985,7 +1062,14 @@ html[data-theme='c'] .toggle.on {
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
-  padding: 10px 14px 14px;
+  padding: 0;
+}
+
+.settings-hint {
+  flex: 1 0 100%;
+  margin-bottom: 2px;
+  color: var(--app-muted);
+  font-size: var(--wa-font-size-xs);
 }
 
 /* API Key：Windows 下只显示尾号 + 按钮，输入框一次性 */
