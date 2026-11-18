@@ -258,6 +258,7 @@ for (const id of [
   'usage-rows',
   'usage-pop-foot',
   'ctx-menu',
+  'app-version',
 ]) {
   el[id] = document.getElementById(id)
 }
@@ -2450,6 +2451,9 @@ function renderLangSelects() {
 /* ---------------------------------------------------------------- 启动 */
 
 loadPersisted()
+if (el['app-version'] !== null && el['app-version'] !== undefined) {
+  el['app-version'].textContent = 'v' + __APP_VERSION__
+}
 applyTheme(state.theme)
 renderThemeSelect()
 renderLangSelects()
