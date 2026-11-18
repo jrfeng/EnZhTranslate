@@ -1322,9 +1322,30 @@ function applyCachedModels() {
 
 /* ---------------------------------------------------------------- 绑定 */
 
+/**
+ * 判断右键是否落在可输入的控件上（含 Web Awesome 组件 shadow DOM 里的原生 input）。
+ * 落在这里就放行浏览器菜单，方便用系统菜单里的「粘贴」。
+ */
+function isEditableTarget(event) {
+  const path = typeof event.composedPath === 'function' ? event.composedPath() : []
+  const TEXT_TYPES = new Set(['text', 'password', 'search', 'url', 'email', 'number', 'tel'])
+  for (const node of path) {
+    if (node === null || node === undefined || typeof node.tagName !== 'string') continue
+    const tag = node.tagName.toUpperCase()
+    if (tag === 'TEXTAREA') return true
+    if (tag === 'INPUT') {
+      const type = String(node.getAttribute('type') || 'text').toLowerCase()
+      return TEXT_TYPES.has(type)
+    }
+    if (node.isContentEditable === true) return true
+  }
+  return false
+}
+
 function bind() {
-  // 屏蔽 WebView 的默认右键菜单（后退、刷新、另存为等），桌面应用里用不到
+  // 只保留输入框里的右键菜单（为了粘贴），其它地方的浏览器菜单一律屏蔽
   document.addEventListener('contextmenu', (event) => {
+    if (isEditableTarget(event)) return
     event.preventDefault()
   })
   el['usage-chip'].addEventListener('click', (event) => {
