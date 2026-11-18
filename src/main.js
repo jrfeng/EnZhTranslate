@@ -22,3 +22,10 @@ await new Promise((resolve) => requestAnimationFrame(() => resolve()))
 document.documentElement.classList.add('app-ready')
 
 await import('./app.js')
+
+// 首屏渲染完成后再让 Rust 把窗口显示出来：窗口一直不可见，就不会先闪一下白底
+try {
+  await window.__TAURI__?.core?.invoke?.('app_ready')
+} catch (error) {
+  /* 显示失败就交给 Rust 侧那条 4 秒兜底 */
+}

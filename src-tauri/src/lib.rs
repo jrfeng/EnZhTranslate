@@ -443,9 +443,16 @@ async fn clipboard_write(request: ClipboardWriteRequest) -> Value {
     }
 }
 
+/// 前端把首屏渲染完之后调用：这时才把窗口显示出来，避免启动时闪白
+#[tauri::command]
+fn app_ready(window: tauri::Window) -> Value {
+    let _ = window.show();
+    let _ = window.set_focus();
+    json!({ "ok": true })
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
-    // GUI 版没有控制台，把 panic 文本落盘，方便事后排查
+pub fn run() {    // GUI 版没有控制台，把 panic 文本落盘，方便事后排查
     std::panic::set_hook(Box::new(|info| {
         let text = format!("{info}\n");
         let path = std::env::temp_dir().join("fish-translate-panic.log");
@@ -468,8 +475,20 @@ pub fn run() {
             balance,
             ocr,
             clipboard_read,
-            clipboard_write
+            clipboard_write,
+            app_ready
         ])
+        .setup(|app| {
+            // 兜底：前端万一没跑起来也别留一个看不见的进程
+            let handle = app.handle().clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_secs(4));
+                if let Some(window) = handle.get_webview_window("main") {
+                    let _ = window.show();
+                }
+            });
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
