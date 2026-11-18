@@ -1,11 +1,14 @@
 import { build } from 'esbuild'
-import { cp, copyFile, mkdir, rm } from 'node:fs/promises'
+import { cp, copyFile, mkdir, readFile, rm } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const src = join(root, 'src')
 const out = join(root, 'dist')
+
+const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
+const appVersion = String(pkg.version || '0.0.0')
 
 await rm(out, { recursive: true, force: true })
 await mkdir(out, { recursive: true })
@@ -22,6 +25,7 @@ await build({
   // 调试工具（宽度角标）只在带 FISH_DEBUG=1 构建时打进包里，release 包会整段剔除
   define: {
     __FISH_DEBUG__: JSON.stringify(process.env.FISH_DEBUG === '1'),
+    __APP_VERSION__: JSON.stringify(appVersion),
   },
 })
 
