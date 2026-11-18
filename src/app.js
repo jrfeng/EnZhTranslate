@@ -1642,10 +1642,12 @@ function renderSizeBadge() {
 }
 
 /**
- * 宽度调试角标：Ctrl+Shift+D 开关（默认关闭，纯测试用）
- * 显示当前窗口尺寸和命中的断点
+ * 宽度调试角标：Ctrl+Shift+D 开关（默认关闭）
+ * 只在 FISH_DEBUG=1 的构建里存在，release 包会被 esbuild 整段剔除
  */
 function initSizeBadge() {
+  if (__FISH_DEBUG__ !== true) return
+
   const enabled = readStore('fish-app.debug-size') === '1'
 
   const badge = document.createElement('div')

@@ -19,6 +19,10 @@ await build({
   charset: 'utf8',
   outfile: join(out, 'app.js'),
   logLevel: 'info',
+  // 调试工具（宽度角标）只在带 FISH_DEBUG=1 构建时打进包里，release 包会整段剔除
+  define: {
+    __FISH_DEBUG__: JSON.stringify(process.env.FISH_DEBUG === '1'),
+  },
 })
 
 for (const file of ['index.html', 'app.css', 'boot-head.js', 'boot-body.js']) {
