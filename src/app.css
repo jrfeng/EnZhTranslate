@@ -1908,7 +1908,7 @@ html[data-theme='c'] .toast {
 
 /* ---------------------------------------------------------------- 响应式*/
 
-@media (min-width: 100000px) { /* DISABLED: was @media (max-width: 900px) */
+@media (max-width: 900px) {
   .workspace {
     padding: 10px;
   }
@@ -1939,7 +1939,7 @@ html[data-theme='c'] .toast {
    —— 第一行 语言对 + 模型，第二行 主题 / 设置 / 余额（右对齐）
    ========================================================================== */
 
-@media (min-width: 100000px) { /* DISABLED: was @media (min-width: 901px) and (max-width: 1180px) */
+@media (min-width: 901px) and (max-width: 1180px) {
   .head {
     flex-wrap: wrap;
     row-gap: 8px;
