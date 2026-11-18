@@ -702,10 +702,10 @@ function renderKeyState() {
   el['key-state'].textContent = state.keyConfigured ? '已配置 ' + state.keyPreview : '未配置'
   el['key-state'].classList.toggle('is-set', state.keyConfigured)
   el['key-edit-open'].textContent = state.keyConfigured ? '更换' : '填写'
-  // 填写 / 更换时把「清除」收起来，退出编辑再显示，避免误点
-  el['key-clear'].hidden = !state.keyConfigured || state.keyEditing
+  el['key-clear'].hidden = !state.keyConfigured
   el['key-edit'].hidden = !state.keyEditing
-  el['key-edit-open'].hidden = state.keyEditing
+  // 编辑时按钮只是「看不见」，仍占位，行高保持不变，避免上下跳一下
+  el['key-managed'].classList.toggle('is-editing', state.keyEditing)
 }
 
 function openKeyEdit() {

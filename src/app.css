@@ -1174,6 +1174,11 @@ html[data-theme='b'] .modal {
   margin-left: auto;
 }
 
+/* 编辑态：按钮不可见但保留占位，保证这一行高度不变 */
+.key-managed.is-editing wa-button {
+  visibility: hidden;
+}
+
 .key-managed wa-button + wa-button {
   margin-left: 0;
 }
