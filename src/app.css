@@ -1005,19 +1005,120 @@ html[data-theme='c'] .toggle.on {
   box-shadow: 2px 2px 0 #101010;
 }
 
-/* ---------------------------------------------------------------- 设置 */
+/* ---------------------------------------------------------------- 设置弹窗 */
 
-.settings .card-head {
-  border-bottom: 0;
-  padding-bottom: 0;
-}
-
-.settings-body {
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1900;
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme='a'] .modal-overlay {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 460px;
+  max-height: 100%;
+  overflow: hidden;
+  border: var(--app-line) solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-panel);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 14px 16px 8px;
+}
+
+.modal-title {
+  font-family: var(--wa-font-family-heading);
+  font-size: var(--wa-font-size-s);
+  font-weight: var(--app-label-weight);
+  color: var(--app-text);
+}
+
+.modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin-left: auto;
+  padding: 0;
+  border: var(--app-line) solid var(--app-border);
+  border-radius: calc(var(--app-radius-sm) / 2);
+  background: transparent;
+  color: var(--app-muted);
+  cursor: pointer;
+}
+
+.modal-close svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+}
+
+.modal-close:hover {
+  background: var(--app-panel-2);
+  color: var(--app-text);
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 6px 16px 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.field-hint {
+  font-size: var(--wa-font-size-xs);
+  line-height: 1.5;
+  color: var(--app-muted);
+}
+
+.settings-form .field-key,
+.settings-form .field-url {
+  width: 100%;
+}
+
+.modal-foot {
+  display: flex;
+  align-items: center;
   gap: 10px;
-  padding: 10px 14px 14px;
+  flex: 0 0 auto;
+  padding: 10px 16px 16px;
+}
+
+.settings-hint {
+  margin-right: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--wa-font-size-xs);
+  color: var(--app-muted);
 }
 
 .field-key,

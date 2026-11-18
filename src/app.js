@@ -185,7 +185,7 @@ const el = {}
 for (const id of [
   'settings-toggle',
   'settings-dot',
-  'close-settings',
+  'settings-x',
   'settings',
   'balance',
   'balance-wrap',
@@ -1120,6 +1120,7 @@ async function run() {
     state.settingsOpen = true
     renderChrome()
     el['settings-hint'].textContent = '请先填写 API Key，再翻译。'
+    if (typeof el['api-key'].focus === 'function') el['api-key'].focus()
     el['api-key'].focus()
     // 设置面板可能被折叠或滚出视野，再补一条 Toast，避免用户以为按钮没反应
     showToast('未提供 API Key，请提供后再翻译。', 'warn')
@@ -1721,6 +1722,13 @@ function bind() {
 
   document.addEventListener('keydown', handleContextMenuKeydown)
 
+  // 设置弹窗：Esc 关闭
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || !state.settingsOpen) return
+    state.settingsOpen = false
+    renderChrome()
+  })
+
   window.addEventListener('blur', hideContextMenu)
   window.addEventListener('resize', hideContextMenu)
   document.addEventListener('scroll', hideContextMenu, true)
@@ -1993,7 +2001,14 @@ function bind() {
     renderChrome()
   })
 
-  el['close-settings'].addEventListener('click', () => {
+  el['settings-x'].addEventListener('click', () => {
+    state.settingsOpen = false
+    renderChrome()
+  })
+
+  // 点遮罩空白处关闭（点面板内部不关）
+  el['settings'].addEventListener('mousedown', (event) => {
+    if (event.target !== el['settings']) return
     state.settingsOpen = false
     renderChrome()
   })

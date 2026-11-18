@@ -61,20 +61,32 @@
 
         <script src="/boot-body.js"></script>
 
-        <section class="card settings" id="settings" hidden>
-          <div class="card-head">
-            <span class="card-title">设置</span>
-            <span class="hint" id="settings-hint">API Key 只保存在本机。</span>
+        <div class="modal-overlay" id="settings" hidden>
+          <div class="modal settings-modal" role="dialog" aria-modal="true" aria-label="设置">
+            <div class="modal-head">
+              <span class="modal-title">设置</span>
+              <button type="button" class="modal-close" id="settings-x" title="关闭" aria-label="关闭">
+                <svg viewBox="0 0 10 10" width="10" height="10" aria-hidden="true"><path d="M2 2l6 6M8 2l-6 6" /></svg>
+              </button>
+            </div>
+            <div class="settings-form">
+              <div class="field">
+                <span class="field-label">API Key</span>
+                <wa-input id="api-key" type="text" size="s" appearance="outlined" placeholder="sk-…" class="field-key is-secret" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></wa-input>
+                <span class="field-hint">只保存在本机。</span>
+              </div>
+              <div class="field">
+                <span class="field-label">接口地址</span>
+                <wa-input id="base-url" size="s" appearance="outlined" class="field-url" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></wa-input>
+                <span class="field-hint">默认 DeepSeek 官方地址；换成第三方地址时，图片识别与余额不可用。</span>
+              </div>
+            </div>
+            <div class="modal-foot">
+              <span class="settings-hint" id="settings-hint"></span>
+              <wa-button id="save-settings" variant="brand" size="s">保存并读取模型</wa-button>
+            </div>
           </div>
-          <div class="settings-body">
-            <span class="field-label">API Key</span>
-            <wa-input id="api-key" type="text" size="s" appearance="outlined" placeholder="sk-…" class="field-key is-secret" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></wa-input>
-            <span class="field-label">接口地址</span>
-            <wa-input id="base-url" size="s" appearance="outlined" class="field-url" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></wa-input>
-            <wa-button id="save-settings" variant="brand" size="s">保存并读取模型</wa-button>
-            <wa-button id="close-settings" appearance="outlined" size="s">关闭</wa-button>
-          </div>
-        </section>
+        </div>
 
         <main class="grid">
           <section class="col">
