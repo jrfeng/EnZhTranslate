@@ -410,6 +410,36 @@ async fn ocr(request: OcrRequest) -> Value {
     })
 }
 
+#[derive(Deserialize)]
+struct ClipboardWriteRequest {
+    #[serde(default)]
+    text: String,
+}
+
+/// 读系统剪贴板的文本（自定义右键菜单的「粘贴」用）
+#[tauri::command]
+async fn clipboard_read() -> Value {
+    match arboard::Clipboard::new() {
+        Ok(mut clipboard) => match clipboard.get_text() {
+            Ok(text) => json!({ "ok": true, "text": text }),
+            Err(_) => json!({ "ok": true, "text": "" }),
+        },
+        Err(error) => error_json("CLIPBOARD", format!("无法访问剪贴板：{error}")),
+    }
+}
+
+/// 写系统剪贴板的文本（自定义右键菜单的「复制 / 剪切」用）
+#[tauri::command]
+async fn clipboard_write(request: ClipboardWriteRequest) -> Value {
+    match arboard::Clipboard::new() {
+        Ok(mut clipboard) => match clipboard.set_text(request.text) {
+            Ok(()) => json!({ "ok": true }),
+            Err(error) => error_json("CLIPBOARD", format!("写入剪贴板失败：{error}")),
+        },
+        Err(error) => error_json("CLIPBOARD", format!("无法访问剪贴板：{error}")),
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // GUI 版没有控制台，把 panic 文本落盘，方便事后排查
@@ -429,7 +459,14 @@ pub fn run() {
                 let _ = window.set_focus();
             }
         }))
-        .invoke_handler(tauri::generate_handler![translate, models, balance, ocr])
+        .invoke_handler(tauri::generate_handler![
+            translate,
+            models,
+            balance,
+            ocr,
+            clipboard_read,
+            clipboard_write
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

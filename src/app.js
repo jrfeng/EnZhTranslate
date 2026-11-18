@@ -250,6 +250,7 @@ for (const id of [
   'usage-pop-total',
   'usage-rows',
   'usage-pop-foot',
+  'ctx-menu',
 ]) {
   el[id] = document.getElementById(id)
 }
@@ -1322,39 +1323,268 @@ function applyCachedModels() {
 
 /* ---------------------------------------------------------------- 绑定 */
 
-/**
- * 判断右键是否落在可输入 / 可复制的区域上（含 Web Awesome 组件 shadow DOM 里的原生 input）：
- * - 输入框、文本域、contenteditable：放行，方便用系统菜单粘贴
- * - 译文输出区、校验预览区：放行，方便用系统菜单复制
- * 其它地方一律屏蔽浏览器的右键菜单。
- */
-function isEditableTarget(event) {
+/* ------------------------------------------------------------ 右键菜单 */
+
+/** 右键落点所属的区域：source / output / key / input / none */
+function contextRegion(event) {
   const path = typeof event.composedPath === 'function' ? event.composedPath() : []
-  const TEXT_TYPES = new Set(['text', 'password', 'search', 'url', 'email', 'number', 'tel'])
+  let region = 'none'
   for (const node of path) {
     if (node === null || node === undefined) continue
-
-    // 译文 / 预览区：允许右键复制
-    if (node.id === 'output' || node.id === 'verify-preview') return true
-
+    if (node.id === 'source') return 'source'
+    if (node.id === 'output' || node.id === 'verify-preview') return 'output'
+    if (node.id === 'api-key' || node.id === 'api-key-legacy') return 'key'
     if (typeof node.tagName !== 'string') continue
     const tag = node.tagName.toUpperCase()
-    if (tag === 'TEXTAREA') return true
+    if (tag === 'TEXTAREA') return 'source'
     if (tag === 'INPUT') {
       const type = String(node.getAttribute('type') || 'text').toLowerCase()
-      return TEXT_TYPES.has(type)
+      if (type === 'password') return 'key'
+      if (['text', 'search', 'url', 'email', 'number', 'tel'].includes(type)) region = 'input'
     }
-    if (node.isContentEditable === true) return true
+    if (region === 'none' && node.isContentEditable === true) region = 'input'
   }
-  return false
+  return region
+}
+
+/** 取右键落点上真正的输入控件（穿透 Web Awesome 的 shadow DOM） */
+function contextInputElement(event) {
+  const path = typeof event.composedPath === 'function' ? event.composedPath() : []
+  for (const node of path) {
+    if (node === null || node === undefined || typeof node.tagName !== 'string') continue
+    const tag = node.tagName.toUpperCase()
+    if (tag === 'TEXTAREA' || tag === 'INPUT') return node
+  }
+  return null
+}
+
+async function clipboardReadText() {
+  const payload = await invokeTauri('clipboard_read')
+  return payload !== null && payload !== undefined && payload.ok === true && typeof payload.text === 'string'
+    ? payload.text
+    : ''
+}
+
+function clipboardWriteText(text) {
+  return invokeTauri('clipboard_write', { text })
+}
+
+/** 往 textarea / input 里插入文本，并把光标放到插入内容之后 */
+function insertInto(input, text) {
+  const start = input.selectionStart ?? input.value.length
+  const end = input.selectionEnd ?? input.value.length
+  input.setRangeText(text, start, end, 'end')
+  input.dispatchEvent(new Event('input', { bubbles: true }))
+}
+
+function selectionOf(input) {
+  const start = input.selectionStart ?? 0
+  const end = input.selectionEnd ?? 0
+  return start === end ? '' : input.value.slice(start, end)
+}
+
+function buildContextItems(region, event) {
+  const input = contextInputElement(event)
+  const items = []
+
+  if (region === 'source' && input instanceof HTMLTextAreaElement) {
+    items.push({
+      label: '剪切',
+      run: async () => {
+        const selected = selectionOf(input) || input.value
+        await clipboardWriteText(selected)
+        if (selectionOf(input)) {
+          input.setRangeText('', input.selectionStart, input.selectionEnd, 'start')
+          input.dispatchEvent(new Event('input', { bubbles: true }))
+        } else {
+          input.value = ''
+          input.dispatchEvent(new Event('input', { bubbles: true }))
+        }
+      },
+    })
+    items.push({
+      label: '复制',
+      run: async () => {
+        await clipboardWriteText(selectionOf(input) || input.value)
+      },
+    })
+    items.push({
+      label: '粘贴',
+      run: async () => {
+        const text = await clipboardReadText()
+        if (text.length > 0) insertInto(input, text)
+      },
+    })
+    items.push({
+      label: '全选',
+      run: () => {
+        input.focus()
+        input.select()
+      },
+    })
+    items.push({
+      label: '图片翻译',
+      run: () => {
+        el['image-input'].click()
+      },
+    })
+    return items
+  }
+
+  if (region === 'output') {
+    const out = el.output
+    items.push({
+      label: '复制',
+      run: async () => {
+        const selected = String(window.getSelection ? window.getSelection().toString() : '')
+        await clipboardWriteText(selected.length > 0 ? selected : out.textContent.trim())
+      },
+    })
+    items.push({
+      label: '全选',
+      run: () => {
+        const range = document.createRange()
+        range.selectNodeContents(out)
+        const selection = window.getSelection()
+        if (selection === null) return
+        selection.removeAllRanges()
+        selection.addRange(range)
+      },
+    })
+    return items
+  }
+
+  if (region === 'key') {
+    items.push({
+      label: '粘贴',
+      run: async () => {
+        const text = await clipboardReadText()
+        if (text.length > 0 && input !== null) insertInto(input, text)
+      },
+    })
+    return items
+  }
+
+  if (region === 'input' && input !== null) {
+    items.push({
+      label: '复制',
+      run: async () => {
+        await clipboardWriteText(selectionOf(input) || input.value)
+      },
+    })
+    items.push({
+      label: '粘贴',
+      run: async () => {
+        const text = await clipboardReadText()
+        if (text.length > 0) insertInto(input, text)
+      },
+    })
+    items.push({
+      label: '全选',
+      run: () => {
+        input.focus()
+        input.select()
+      },
+    })
+    return items
+  }
+
+  return []
+}
+
+function hideContextMenu() {
+  if (el['ctx-menu'] === null || el['ctx-menu'] === undefined) return
+  el['ctx-menu'].hidden = true
+}
+
+function isContextMenuOpen() {
+  return el['ctx-menu'] !== null && el['ctx-menu'] !== undefined && !el['ctx-menu'].hidden
+}
+
+function showContextMenu(items, x, y) {
+  const menu = el['ctx-menu']
+  menu.replaceChildren()
+
+  for (const item of items) {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'ctx-item'
+    button.setAttribute('role', 'menuitem')
+    button.textContent = item.label
+    button.addEventListener('click', () => {
+      hideContextMenu()
+      void item.run()
+    })
+    menu.appendChild(button)
+  }
+
+  menu.hidden = false
+  menu.style.left = '0px'
+  menu.style.top = '0px'
+
+  // 越界时贴边，避免菜单跑到窗口外
+  const rect = menu.getBoundingClientRect()
+  const margin = 8
+  const left = Math.max(margin, Math.min(x, window.innerWidth - rect.width - margin))
+  const top = Math.max(margin, Math.min(y, window.innerHeight - rect.height - margin))
+  menu.style.left = left + 'px'
+  menu.style.top = top + 'px'
+
+  // preventScroll：聚焦菜单项时不要让页面滚动，否则会触发 scroll 监听把菜单关掉
+  const first = menu.querySelector('.ctx-item')
+  if (first !== null) first.focus({ preventScroll: true })
+}
+
+function handleContextMenuKeydown(event) {
+  if (!isContextMenuOpen()) return
+  const items = Array.from(el['ctx-menu'].querySelectorAll('.ctx-item'))
+  if (items.length === 0) return
+  const index = items.indexOf(document.activeElement)
+
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    hideContextMenu()
+    return
+  }
+  if (event.key === 'ArrowDown') {
+    event.preventDefault()
+    items[(index + 1 + items.length) % items.length].focus()
+    return
+  }
+  if (event.key === 'ArrowUp') {
+    event.preventDefault()
+    items[(index - 1 + items.length) % items.length].focus()
+    return
+  }
+  if (event.key === 'Enter') {
+    event.preventDefault()
+    if (index >= 0) items[index].click()
+  }
 }
 
 function bind() {
-  // 只保留输入框里的右键菜单（为了粘贴），其它地方的浏览器菜单一律屏蔽
+  // 右键：屏蔽浏览器菜单，改用自绘菜单（样式跟随主题）
   document.addEventListener('contextmenu', (event) => {
-    if (isEditableTarget(event)) return
+    const items = buildContextItems(contextRegion(event), event)
+    if (items.length === 0) {
+      hideContextMenu()
+      return
+    }
     event.preventDefault()
+    showContextMenu(items, event.clientX, event.clientY)
   })
+
+  document.addEventListener('mousedown', (event) => {
+    if (!isContextMenuOpen()) return
+    if (el['ctx-menu'].contains(event.target)) return
+    hideContextMenu()
+  })
+
+  document.addEventListener('keydown', handleContextMenuKeydown)
+
+  window.addEventListener('blur', hideContextMenu)
+  window.addEventListener('resize', hideContextMenu)
+  document.addEventListener('scroll', hideContextMenu, true)
   el['usage-chip'].addEventListener('click', (event) => {
     event.stopPropagation()
     if (isUsagePopOpen()) {
