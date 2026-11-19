@@ -2447,7 +2447,10 @@ html[data-theme='d'] .card-icon-btn.on {
 }
 
 /* 「清除」用的是 48 网格，线宽要按比例放大，否则 18px 下只有 0.56px */
+/* 「清除」用原始文件尺寸（22×22、48 网格、stroke 2），不跟着放大到 24 */
 .card-icon-btn svg[viewBox='0 0 48 48'] {
+  width: 22px;
+  height: 22px;
   stroke-width: 2;
 }
 
