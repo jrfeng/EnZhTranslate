@@ -2521,6 +2521,14 @@ html[data-theme='d'] .card-icon-btn.on {
     display: flex;
   }
 
+  /* 校验弹窗：图片在上、编辑区在下 */
+  .verify-dialog {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1.15fr) minmax(0, 1fr);
+    width: min(720px, 100%);
+    height: min(720px, 100%);
+  }
+
   /* 窄窗口下不再用内嵌面板，改由按钮打开专用弹窗 */
   .card.terms {
     display: none;
