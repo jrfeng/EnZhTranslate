@@ -1364,6 +1364,103 @@ html[data-theme='c'] .hl-code {
 
 /* ---------------------------------------------------------------- 术语 */
 
+/* 术语入口：左列原文下方的大按钮 */
+.terms-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--app-radius-sm);
+  background: color-mix(in srgb, var(--app-accent) 12%, var(--app-panel));
+  color: var(--app-accent);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+@supports not (background: color-mix(in srgb, red 10%, white)) {
+  .terms-trigger {
+    background: var(--app-panel-2);
+  }
+}
+
+.terms-trigger:hover {
+  background: color-mix(in srgb, var(--app-accent) 20%, var(--app-panel));
+}
+
+.terms-badge {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--app-accent) 18%, transparent);
+}
+
+.terms-badge svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.terms-label {
+  font-size: var(--wa-font-size-s);
+  font-weight: 700;
+}
+
+.terms-go {
+  margin-left: auto;
+  font-size: var(--wa-font-size-xs);
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+/* 术语弹窗 */
+.terms-modal {
+  width: 520px;
+}
+
+.modal-count {
+  font-size: var(--wa-font-size-xs);
+  color: var(--app-muted);
+  font-weight: 400;
+}
+
+.terms-modal .terms-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 16px 10px;
+}
+
+.terms-modal .terms-add .term-field {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.terms-modal .terms-list {
+  max-height: 240px;
+  overflow: auto;
+  padding: 0 10px 8px;
+}
+
+.terms-modal .modal-foot {
+  gap: 8px;
+}
+
+.terms-foot-gap {
+  flex: 1 1 auto;
+}
+
 .terms-body {
   display: flex;
   flex-direction: column;

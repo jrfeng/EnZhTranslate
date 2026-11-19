@@ -74,7 +74,6 @@ const KEYS = {
   terms: 'fish-app.terms',
   autoCopy: 'fish-app.auto-copy',
   immediate: 'fish-app.immediate',
-  termsOpen: 'fish-app.terms-open',
   view: 'fish-app.view',
   theme: 'fish-app.theme',
   sourceLang: 'fish-app.source-lang',
@@ -145,7 +144,6 @@ const state = {
   terms: [],
   termSource: '',
   termTarget: '',
-  termsOpen: true,
   sourceLang: DEFAULT_SOURCE_LANG,
   targetLang: DEFAULT_TARGET_LANG,
   translatedText: '',
@@ -239,13 +237,16 @@ for (const id of [
   'translate',
   'hl',
   'source',
-  'term-count',
   'term-clear',
   'confirm-modal',
   'confirm-cancel',
   'confirm-ok',
-  'terms-toggle',
-  'terms-body',
+  'terms-trigger',
+  'terms-label',
+  'terms-modal',
+  'terms-modal-count',
+  'terms-x',
+  'terms-done',
   'term-source',
   'term-target',
   'term-add',
@@ -662,7 +663,6 @@ function loadPersisted() {
 
   state.autoCopy = readStore(KEYS.autoCopy) === '1'
   state.immediate = readStore(KEYS.immediate) === '1'
-  state.termsOpen = readStore(KEYS.termsOpen) !== '0'
   // 译文视图不持久化：每次启动都是「预览」
   state.view = 'preview'
   removeStore(KEYS.view)
@@ -755,9 +755,11 @@ function renderChrome() {  const loading = state.phase === 'loading'
   el.settings.hidden = !state.settingsOpen
   el['settings-toggle'].setAttribute('aria-expanded', String(state.settingsOpen))
 
-  el['terms-toggle'].textContent = state.termsOpen ? '收起' : '展开'
-  el['terms-body'].hidden = !state.termsOpen
-  el['term-count'].textContent = String(state.terms.length)
+  const termsText = '术语 ' + state.terms.length + ' 条'
+  el['terms-label'].textContent = termsText
+  el['terms-modal-count'].textContent = state.terms.length + ' 条'
+  el['terms-modal'].hidden = !state.termsModalOpen
+  el['terms-trigger'].setAttribute('aria-expanded', String(state.termsModalOpen))
   el['term-clear'].disabled = state.terms.length === 0
   el['term-add'].disabled = !(
     state.termSource.trim().length > 0 &&
@@ -1754,7 +1756,13 @@ function bind() {
 
   // 设置弹窗：Esc 关闭
   document.addEventListener('keydown', (event) => {
-    if (event.key !== 'Escape' || !state.settingsOpen) return
+    if (event.key === 'Escape' && state.termsModalOpen) {
+    state.termsModalOpen = false
+    renderChrome()
+    return
+  }
+
+  if (event.key !== 'Escape' || !state.settingsOpen) return
     state.settingsOpen = false
     renderChrome()
   })
@@ -1980,12 +1988,27 @@ function bind() {
     renderChrome()
   })
 
-  el['terms-toggle'].addEventListener('click', () => {
-    state.termsOpen = !state.termsOpen
-    writeStore(KEYS.termsOpen, state.termsOpen ? '1' : '0')
+  el['terms-trigger'].addEventListener('click', () => {
+    state.termsModalOpen = true
+    renderChrome()
+    el['term-source'].focus()
+  })
+
+  el['terms-x'].addEventListener('click', () => {
+    state.termsModalOpen = false
     renderChrome()
   })
 
+  el['terms-done'].addEventListener('click', () => {
+    state.termsModalOpen = false
+    renderChrome()
+  })
+
+  el['terms-modal'].addEventListener('mousedown', (event) => {
+    if (event.target !== el['terms-modal']) return
+    state.termsModalOpen = false
+    renderChrome()
+  })
   el['term-clear'].addEventListener('click', () => {
     if (state.terms.length === 0) return
     state.confirmClear = true
