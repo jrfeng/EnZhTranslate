@@ -2587,6 +2587,19 @@ html[data-theme='d'] .card-icon-btn.on {
     height: min(720px, 100%);
   }
 
+  /* 关闭按钮挪到弹窗右上角，不再跟着编辑区头部走 */
+  .verify-head-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 3;
+    background: var(--app-panel);
+  }
+
+  .verify-head {
+    padding-right: 52px;
+  }
+
   /* 窄窗口下不再用内嵌面板，改由按钮打开专用弹窗 */
   .card.terms {
     display: none;
