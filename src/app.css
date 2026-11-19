@@ -1217,10 +1217,46 @@ wa-input.is-secret::part(input) {
   min-height: 0;
 }
 
-/* 图片预览条上的刷新按钮：只放图标 */
-.image-refresh-btn {
-  --wa-button-leading-space: 8px;
-  --wa-button-trailing-space: 8px;
+/* 图片预览条上的按钮：重新识别 / 校验，统一 30×30 图标 */
+.image-refresh-btn::part(button) {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  padding: 0;
+  justify-content: center;
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  background: var(--app-panel);
+}
+
+.image-strip-icon {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: var(--app-line) solid var(--app-border);
+  border-radius: 4px;
+  background: var(--app-panel);
+  color: var(--app-muted);
+  cursor: pointer;
+}
+
+.image-strip-icon:hover {
+  background: var(--app-panel-2);
+  color: var(--app-text);
+}
+
+.image-strip-icon svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .image-refresh-icon {
@@ -2519,6 +2555,15 @@ html[data-theme='d'] .card-icon-btn.on {
 @media (max-width: 768px) {
   .terms-trigger {
     display: flex;
+  }
+
+  /* 图片条：校验改成图标 */
+  .image-strip-icon {
+    display: inline-flex;
+  }
+
+  #image-zoom {
+    display: none;
   }
 
   /* 校验弹窗：图片在上、编辑区在下 */

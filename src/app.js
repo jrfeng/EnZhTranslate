@@ -210,6 +210,7 @@ for (const id of [
   'image-name',
   'image-size',
   'image-zoom',
+  'image-zoom-icon',
   'image-refresh',
   'toast-stack',
   'verify-overlay',
@@ -786,6 +787,7 @@ function renderChrome() {  const loading = state.phase === 'loading'
   el['clear-icon'].dataset.tip = '清除'
   el['auto-copy-icon'].dataset.tip = state.autoCopy ? '自动复制：开' : '自动复制：关'
   el['view-icon'].dataset.tip = el['view-icon'].title
+  el['image-zoom-icon'].dataset.tip = '校验识别结果'
 
   el.settings.hidden = !state.settingsOpen
   el['settings-toggle'].setAttribute('aria-expanded', String(state.settingsOpen))
@@ -1901,6 +1903,7 @@ function bind() {
   el['image-thumb'].addEventListener('click', () => void openVerify())
   el['image-refresh'].addEventListener('click', refreshOcr)
   el['image-zoom'].addEventListener('click', () => void openVerify())
+  el['image-zoom-icon'].addEventListener('click', () => void openVerify())
 
   el['verify-overlay'].addEventListener('click', (event) => {
     if (event.target === el['verify-overlay']) closeVerify()
@@ -2218,6 +2221,7 @@ function bind() {
     el['clear-icon'],
     el['auto-copy-icon'],
     el['view-icon'],
+    el['image-zoom-icon'],
   ]
 
   for (const button of tipButtons) {
