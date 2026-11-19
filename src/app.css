@@ -2474,6 +2474,11 @@ html[data-theme='d'] .card-icon-btn.on {
     display: inline-flex;
   }
 
+  /* 术语入口在 641–768 仍是独立一行，640 以下才改用头部图标 */
+  #terms-icon {
+    display: none;
+  }
+
   .card-meta {
     gap: 6px;
   }
@@ -2518,8 +2523,8 @@ html[data-theme='d'] .card-icon-btn.on {
   .grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    /* 原文 / 术语 / 译文：上下两块平分剩余高度 */
-    grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
+    /* 术语已挪到工具栏，这里只剩 原文 / 译文 两块，平分高度 */
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
     gap: 12px;
   }
 
@@ -2536,6 +2541,15 @@ html[data-theme='d'] .card-icon-btn.on {
   .grid > .card-grow textarea,
   .grid > .card-grow .editor {
     min-height: 0;
+  }
+
+  /* 术语入口从独立一行挪到原文卡片工具栏 */
+  .terms-trigger {
+    display: none;
+  }
+
+  #terms-icon {
+    display: inline-flex;
   }
 }
 

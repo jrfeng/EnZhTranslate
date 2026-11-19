@@ -264,6 +264,7 @@ for (const id of [
   'auto-copy',
   'immediate',
   'immediate-icon',
+  'terms-icon',
   'clear-icon',
   'auto-copy-icon',
   'view-icon',
@@ -778,6 +779,7 @@ function renderChrome() {  const loading = state.phase === 'loading'
   el['view-icon'].innerHTML = state.view === 'preview' ? VIEW_EYE_ICON : VIEW_CODE_ICON
 
   // 卡片图标按钮的 hover 提示
+  el['terms-icon'].dataset.tip = '术语 ' + state.terms.length + ' 条'
   el['immediate-icon'].dataset.tip = state.immediate ? '粘贴后翻译：开' : '粘贴后翻译：关'
   el['clear-icon'].dataset.tip = '清除'
   el['auto-copy-icon'].dataset.tip = state.autoCopy ? '自动复制：开' : '自动复制：关'
@@ -2052,6 +2054,12 @@ function bind() {
     el['term-source'].focus()
   })
 
+  el['terms-icon'].addEventListener('click', () => {
+    state.termsModalOpen = true
+    renderChrome()
+    el['term-source'].focus()
+  })
+
   el['terms-toggle'].addEventListener('click', () => {
     state.termsOpen = !state.termsOpen
     writeStore(KEYS.termsOpen, state.termsOpen ? '1' : '0')
@@ -2203,6 +2211,7 @@ function bind() {
     el['model-icon-btn'],
     el['theme-icon-btn'],
     el['settings-icon-btn'],
+    el['terms-icon'],
     el['immediate-icon'],
     el['clear-icon'],
     el['auto-copy-icon'],
