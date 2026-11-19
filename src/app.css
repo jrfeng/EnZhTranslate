@@ -2596,9 +2596,6 @@ html[data-theme='d'] .card-icon-btn.on {
     background: var(--app-panel);
   }
 
-  .verify-head {
-    padding-right: 52px;
-  }
 
   /* 窄窗口下不再用内嵌面板，改由按钮打开专用弹窗 */
   .card.terms {
