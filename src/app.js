@@ -269,6 +269,7 @@ for (const id of [
   'model-status-text',
   'model-select',
   'char-count',
+  'char-count-head',
   'clear',
   'translate',
   'hl',
@@ -784,6 +785,9 @@ function renderChrome() {  const loading = state.phase === 'loading'
   }
 
   el['char-count'].textContent = state.input.length + ' 字符'
+  if (el['char-count-head'] !== null && el['char-count-head'] !== undefined) {
+    el['char-count-head'].textContent = state.input.length + ' 字符'
+  }
   el.progress.hidden = !loading
   el['ocr-progress'].hidden = !ocrBusy
   el.stale.hidden = !isStale()

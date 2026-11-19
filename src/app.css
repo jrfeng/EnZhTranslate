@@ -2261,6 +2261,11 @@ html[data-theme='c'] .toast {
    ========================================================================== */
 
 
+/* 字符数：手机上跟在「原文」标题后面 */
+.card-count-head {
+  display: none;
+}
+
 /* ------------------------------------------------- 640 以下的「更多」菜单 */
 
 #more-btn {
@@ -3310,5 +3315,18 @@ input,
     height: 46px;
     font-size: 15px;
     font-weight: 600;
+  }
+}
+
+
+@media (max-width: 480px) {
+  .card-count-head {
+    display: inline;
+    margin-left: 6px;
+  }
+
+  /* 底部那行只在手机上让位给标题旁 */
+  .card-foot {
+    display: none;
   }
 }
