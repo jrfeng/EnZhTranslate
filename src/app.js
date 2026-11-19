@@ -2508,12 +2508,20 @@ function dataUrlMime(dataUrl) {
 
 /** 对给定图片跑一次 OCR，把结果写进输入框 */
 async function runOcr(dataUrl, name, mime) {
+  // 只要这次识别结束（成功 / 空结果 / 报错），都应该把「重新识别」露出来
+  const failEarly = (message) => {
+    state.ocrBusy = false
+    state.ocrDone = true
+    renderChrome()
+    ocrFail(message)
+  }
+
   if (!usesDeepSeekEndpoint()) {
-    ocrFail(OCR_UNSUPPORTED)
+    failEarly(OCR_UNSUPPORTED)
     return
   }
   if (config.apiKey.length === 0) {
-    ocrFail('请先在「设置」里填写 API Key。')
+    failEarly('请先在「设置」里填写 API Key。')
     return
   }
 
@@ -2521,7 +2529,7 @@ async function runOcr(dataUrl, name, mime) {
   const comma = text.indexOf(',')
   const data = comma >= 0 ? text.slice(comma + 1) : text
   if (data.length === 0) {
-    ocrFail('图片数据为空，请重新选一张图片。')
+    failEarly('图片数据为空，请重新选一张图片。')
     return
   }
 
@@ -2537,11 +2545,10 @@ async function runOcr(dataUrl, name, mime) {
     data,
   })
 
+  // 先标记完成，再渲染，这样下面的任何分支都不会把「重新识别」藏起来
   state.ocrBusy = false
-  // 出错时下面会提前 return，所以先收掉进度条
-  renderChrome()
-  // 请求有结果了（成功或失败都算），此时才显示「刷新」
   state.ocrDone = true
+  renderChrome()
 
   if (payload === null || payload === undefined || payload.ok !== true) {
     ocrFail(ocrErrorMessage(payload?.error))
