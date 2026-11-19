@@ -1455,6 +1455,14 @@ function contextRegion(event) {
   for (const node of path) {
     if (node === null || node === undefined) continue
     if (node.id === 'source') return 'source'
+    if (
+      node.id === 'image-preview' ||
+      node.id === 'image-thumb' ||
+      node.id === 'image-name' ||
+      node.id === 'image-size'
+    ) {
+      return 'image'
+    }
     if (node.id === 'output' || node.id === 'verify-preview') return 'output'
     if (node.id === 'api-key' || node.id === 'api-key-legacy') return 'key'
     if (typeof node.tagName !== 'string') continue
@@ -1588,6 +1596,26 @@ function buildContextItems(region, event) {
       run: () => {
         el['image-input'].click()
       },
+    })
+    return items
+  }
+
+  if (region === 'image') {
+    const hasImage = state.image !== null
+    items.push({
+      label: '校验',
+      disabled: !hasImage,
+      run: () => void openVerify(),
+    })
+    items.push({
+      label: '重新识别',
+      disabled: !hasImage || state.ocrBusy,
+      run: () => refreshOcr(),
+    })
+    items.push({
+      label: '删除',
+      disabled: !hasImage,
+      run: () => clearImage(),
     })
     return items
   }
