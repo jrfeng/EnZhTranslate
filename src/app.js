@@ -74,6 +74,7 @@ const KEYS = {
   terms: 'fish-app.terms',
   autoCopy: 'fish-app.auto-copy',
   immediate: 'fish-app.immediate',
+  termsOpen: 'fish-app.terms-open',
   view: 'fish-app.view',
   theme: 'fish-app.theme',
   sourceLang: 'fish-app.source-lang',
@@ -144,6 +145,7 @@ const state = {
   terms: [],
   termSource: '',
   termTarget: '',
+  termsOpen: true,
   sourceLang: DEFAULT_SOURCE_LANG,
   targetLang: DEFAULT_TARGET_LANG,
   translatedText: '',
@@ -155,6 +157,8 @@ const state = {
   selectedModel: DEFAULT_MODEL,
   models: [],
   settingsOpen: false,
+  /** 窄窗口下术语面板是否以弹层形式打开 */
+  termsModalOpen: false,
   /** 窄窗口下展开的图标菜单：null / 'model' / 'theme' */
   openIconMenu: null,
   /** 当前主题 id：auto / a / b / c */
@@ -237,16 +241,17 @@ for (const id of [
   'translate',
   'hl',
   'source',
+  'term-count',
   'term-clear',
   'confirm-modal',
   'confirm-cancel',
   'confirm-ok',
+  'terms-toggle',
   'terms-trigger',
   'terms-label',
-  'terms-modal',
-  'terms-modal-count',
-  'terms-x',
-  'terms-done',
+  'terms-backdrop',
+  'terms-card',
+  'terms-body',
   'term-source',
   'term-target',
   'term-add',
@@ -663,6 +668,7 @@ function loadPersisted() {
 
   state.autoCopy = readStore(KEYS.autoCopy) === '1'
   state.immediate = readStore(KEYS.immediate) === '1'
+  state.termsOpen = readStore(KEYS.termsOpen) !== '0'
   // 译文视图不持久化：每次启动都是「预览」
   state.view = 'preview'
   removeStore(KEYS.view)
@@ -755,11 +761,13 @@ function renderChrome() {  const loading = state.phase === 'loading'
   el.settings.hidden = !state.settingsOpen
   el['settings-toggle'].setAttribute('aria-expanded', String(state.settingsOpen))
 
-  const termsText = '术语 ' + state.terms.length + ' 条'
-  el['terms-label'].textContent = termsText
-  el['terms-modal-count'].textContent = state.terms.length + ' 条'
-  el['terms-modal'].hidden = !state.termsModalOpen
-  el['terms-trigger'].setAttribute('aria-expanded', String(state.termsModalOpen))
+  const narrow = window.matchMedia('(max-width: 768px)').matches
+  el['terms-label'].textContent = '术语 ' + state.terms.length + ' 条'
+  el['terms-toggle'].textContent = narrow ? '关闭' : state.termsOpen ? '收起' : '展开'
+  el['terms-body'].hidden = narrow ? !state.termsModalOpen : !state.termsOpen
+  el['terms-card'].classList.toggle('is-open', narrow && state.termsModalOpen)
+  el['terms-backdrop'].hidden = !(narrow && state.termsModalOpen)
+  el['term-count'].textContent = String(state.terms.length)
   el['term-clear'].disabled = state.terms.length === 0
   el['term-add'].disabled = !(
     state.termSource.trim().length > 0 &&
@@ -1994,20 +2002,27 @@ function bind() {
     el['term-source'].focus()
   })
 
-  el['terms-x'].addEventListener('click', () => {
+  el['terms-toggle'].addEventListener('click', () => {
+    if (window.matchMedia('(max-width: 768px)').matches) {
+      state.termsModalOpen = false
+      renderChrome()
+      return
+    }
+    state.termsOpen = !state.termsOpen
+    writeStore(KEYS.termsOpen, state.termsOpen ? '1' : '0')
+    renderChrome()
+  })
+
+  el['terms-backdrop'].addEventListener('mousedown', () => {
     state.termsModalOpen = false
     renderChrome()
   })
 
-  el['terms-done'].addEventListener('click', () => {
-    state.termsModalOpen = false
-    renderChrome()
-  })
-
-  el['terms-modal'].addEventListener('mousedown', (event) => {
-    if (event.target !== el['terms-modal']) return
-    state.termsModalOpen = false
-    renderChrome()
+  window.addEventListener('resize', () => {
+    if (!window.matchMedia('(max-width: 768px)').matches && state.termsModalOpen) {
+      state.termsModalOpen = false
+      renderChrome()
+    }
   })
   el['term-clear'].addEventListener('click', () => {
     if (state.terms.length === 0) return

@@ -1364,9 +1364,9 @@ html[data-theme='c'] .hl-code {
 
 /* ---------------------------------------------------------------- 术语 */
 
-/* 术语入口：左列原文下方的大按钮 */
+/* 窄窗口的术语入口（≤768）：面板变成弹层，入口是这个按钮 */
 .terms-trigger {
-  display: flex;
+  display: none;
   align-items: center;
   gap: 10px;
   flex: 0 0 auto;
@@ -1424,41 +1424,12 @@ html[data-theme='c'] .hl-code {
   opacity: 0.8;
 }
 
-/* 术语弹窗 */
-.terms-modal {
-  width: 520px;
-}
-
-.modal-count {
-  font-size: var(--wa-font-size-xs);
-  color: var(--app-muted);
-  font-weight: 400;
-}
-
-.terms-modal .terms-add {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 16px 10px;
-}
-
-.terms-modal .terms-add .term-field {
-  flex: 1 1 0;
-  min-width: 0;
-}
-
-.terms-modal .terms-list {
-  max-height: 240px;
-  overflow: auto;
-  padding: 0 10px 8px;
-}
-
-.terms-modal .modal-foot {
-  gap: 8px;
-}
-
-.terms-foot-gap {
-  flex: 1 1 auto;
+.terms-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 2999;
+  background: rgba(15, 23, 42, 0.38);
 }
 
 .terms-body {
@@ -2369,6 +2340,40 @@ html[data-theme='d'] .toolbar-tip {
   /* 设置一栏：文字按钮换成齿轮图标 */
   #settings-toggle {
     display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .terms-trigger {
+    display: flex;
+  }
+
+  /* 面板默认隐藏，点按钮后变成居中弹层 */
+  .card.terms {
+    display: none;
+  }
+
+  .card.terms.is-open {
+    display: flex;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 3000;
+    width: min(520px, calc(100vw - 32px));
+    max-height: calc(100vh - 96px);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+  }
+
+  .card.terms.is-open .terms-body {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  .terms-backdrop:not([hidden]) {
+    display: block;
   }
 }
 
