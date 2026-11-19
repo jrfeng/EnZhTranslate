@@ -310,6 +310,7 @@ for (const id of [
   'output',
   'usage-foot',
   'usage-chip',
+  'usage-scrim',
   'usage-chip-text',
   'usage-pop',
   'usage-pop-total',
@@ -956,11 +957,13 @@ function isUsagePopOpen() {
 
 function openUsagePop() {
   el['usage-pop'].hidden = false
+  el['usage-scrim'].hidden = false
   el['usage-chip'].setAttribute('aria-expanded', 'true')
 }
 
 function closeUsagePop() {
   el['usage-pop'].hidden = true
+  el['usage-scrim'].hidden = true
   el['usage-chip'].setAttribute('aria-expanded', 'false')
 }
 
@@ -1891,6 +1894,8 @@ function bind() {
   window.addEventListener('blur', hideContextMenu)
   window.addEventListener('resize', hideContextMenu)
   document.addEventListener('scroll', hideContextMenu, true)
+  el['usage-scrim'].addEventListener('click', () => closeUsagePop())
+
   el['usage-chip'].addEventListener('click', (event) => {
     event.stopPropagation()
     if (isUsagePopOpen()) {

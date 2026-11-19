@@ -3330,3 +3330,45 @@ input,
     display: none;
   }
 }
+
+
+/* ------------------------------------------------- tok 明细：手机上是底部弹窗 */
+
+.usage-scrim {
+  display: none;
+}
+
+@media (max-width: 480px) {
+  .usage-scrim:not([hidden]) {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1090;
+    background: rgba(15, 23, 42, 0.36);
+  }
+
+  .usage-pop {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    z-index: 1100;
+    width: auto;
+    max-height: 70vh;
+    overflow: auto;
+    padding: 14px 16px 20px;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -12px 40px rgba(20, 30, 50, 0.22);
+  }
+
+  .usage-pop::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 4px;
+    margin: 0 auto 10px;
+    border-radius: 2px;
+    background: var(--app-border);
+  }
+}
