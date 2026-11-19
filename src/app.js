@@ -2036,8 +2036,10 @@ function bind() {
   })
 
   el['terms-clear-modal'].addEventListener('click', () => {
-    state.termsModalOpen = false
-    renderChrome()
+    // 和面板上的「清空」一致：先弹二次确认，不直接关掉术语弹窗
+    if (state.terms.length === 0) return
+    state.confirmClear = true
+    el['confirm-modal'].open = true
   })
 
   // 宽度跨过 768 时，编辑区要在面板和弹窗之间搬回去/搬过来，
