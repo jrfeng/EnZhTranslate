@@ -19,7 +19,7 @@ for arg in "$@"; do
     --universal) UNIVERSAL=1 ;;
     --app-only) BUNDLES_ONLY_APP=1 ;;
     -h|--help)
-      sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'
+      awk 'NR>1 && /^#/ { sub(/^# ?/, ""); print; next } NR>1 { exit }' "$0"
       exit 0
       ;;
     *)
@@ -90,8 +90,22 @@ done
 
 # 统一收集到仓库根目录的 build/（已在 .gitignore 中排除）
 mkdir -p build
-find "$BUNDLE_DIR" -maxdepth 2 \( -name '*.dmg' \) -exec cp -Rf {} build/ \; 2>/dev/null
-echo "    dmg 已复制到 ./build/"
+rm -f build/*.dmg
+if [ "$BUNDLES_ONLY_APP" -eq 1 ]; then
+  newest=$(find "$BUNDLE_DIR" -maxdepth 3 -name '*.app' -print0 2>/dev/null | xargs -0 ls -dt 2>/dev/null | head -n1 || true)
+  if [ -n "$newest" ]; then
+    rm -rf build/*.app
+    cp -Rf "$newest" build/
+    echo "    .app 已复制到 ./build/"
+  fi
+else
+  newest=$(ls -t "$BUNDLE_DIR"/dmg/*.dmg 2>/dev/null | head -n1 || true)
+  if [ -n "$newest" ]; then
+    cp -f "$newest" build/
+    echo "    dmg 已复制到 ./build/"
+  fi
+fi
+ls -1 build 2>/dev/null | sed 's/^/    /'
 
 cat <<'TIP'
 

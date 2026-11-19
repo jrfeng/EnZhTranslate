@@ -157,6 +157,18 @@ const state = {
   selectedModel: DEFAULT_MODEL,
   models: [],
   settingsOpen: false,
+  /** 窄窗口下术语面板是否以弹层形式打开 */
+  termsModalOpen: false,
+  /** 640 以下的「更多」菜单 */
+  moreMenuOpen: false,
+  modelPickerOpen: false,
+  themePickerOpen: false,
+  balanceOpen: false,
+  /** 弹窗里选中、但还没点「完成」的临时值 */
+  pendingModel: '',
+  pendingTheme: '',
+  /** 窄窗口下展开的图标菜单：null / 'model' / 'theme' */
+  openIconMenu: null,
   /** 当前主题 id：auto / a / b / c */
   theme: 'auto',
   /** 图片识别状态 */
@@ -184,14 +196,38 @@ const state = {
 const el = {}
 for (const id of [
   'settings-toggle',
-  'settings-dot',
-  'close-settings',
+  'settings-icon-btn',
+  'more-btn',
+  'mobile-image',
+  'mobile-terms',
+  'mobile-terms-label',
+  'mobile-translate',
+  'more-menu',
+  'model-modal',
+  'model-modal-list',
+  'model-modal-x',
+  'model-modal-cancel',
+  'model-modal-done',
+  'theme-modal',
+  'theme-modal-list',
+  'theme-modal-x',
+  'theme-modal-done',
+  'balance-modal',
+  'balance-modal-x',
+  'balance-modal-refresh',
+  'balance-modal-ok',
+  'balance-amount',
+  'settings-x',
   'settings',
   'balance',
   'balance-wrap',
   'balance-progress',
   'balance-divider',
   'theme-select',
+  'model-icon-btn',
+  'model-menu',
+  'theme-icon-btn',
+  'theme-menu',
   'source-lang',
   'target-lang',
   'pick-image',
@@ -202,6 +238,7 @@ for (const id of [
   'image-name',
   'image-size',
   'image-zoom',
+  'image-zoom-icon',
   'image-refresh',
   'toast-stack',
   'verify-overlay',
@@ -216,6 +253,9 @@ for (const id of [
   'verify-save',
   'verify-close',
   'verify-view',
+  'verify-expand',
+  'verify-abandon',
+  'verify-save-bottom',
   'verify-preview',
   'confirm-keep',
   'confirm-discard',
@@ -225,9 +265,11 @@ for (const id of [
   'api-key',
   'base-url',
   'save-settings',
-  'settings-hint',
+  'model-status',
+  'model-status-text',
   'model-select',
   'char-count',
+  'char-count-head',
   'clear',
   'translate',
   'hl',
@@ -238,13 +280,30 @@ for (const id of [
   'confirm-cancel',
   'confirm-ok',
   'terms-toggle',
+  'terms-trigger',
+  'terms-label',
+  'terms-modal',
+  'terms-modal-body',
+  'terms-modal-count',
+  'terms-x',
+  'terms-done',
+  'terms-clear-modal',
+  'terms-card',
   'terms-body',
   'term-source',
   'term-target',
   'term-add',
+  'term-add-icon',
+  'term-add-foot',
   'terms-list',
   'auto-copy',
   'immediate',
+  'immediate-icon',
+  'terms-icon',
+  'terms-icon-label',
+  'clear-icon',
+  'auto-copy-icon',
+  'view-icon',
   'stale',
   'view-toggle',
   'copy',
@@ -252,6 +311,7 @@ for (const id of [
   'output',
   'usage-foot',
   'usage-chip',
+  'usage-scrim',
   'usage-chip-text',
   'usage-pop',
   'usage-pop-total',
@@ -709,6 +769,7 @@ function renderChrome() {  const loading = state.phase === 'loading'
   el.translate.disabled = state.input.trim().length === 0 || loading || ocrBusy
   el.translate.textContent = loading ? '翻译中…' : '翻译'
   el.clear.disabled = (state.input.length === 0 && state.image === null) || ocrBusy
+  el['clear-icon'].disabled = el.clear.disabled
   el['pick-image'].hidden = !usesDeepSeekEndpoint()
   el['pick-image'].disabled = ocrBusy || loading
   // 非 DeepSeek 地址没有余额接口
@@ -726,6 +787,9 @@ function renderChrome() {  const loading = state.phase === 'loading'
   }
 
   el['char-count'].textContent = state.input.length + ' 字符'
+  if (el['char-count-head'] !== null && el['char-count-head'] !== undefined) {
+    el['char-count-head'].textContent = state.input.length + ' 字符'
+  }
   el.progress.hidden = !loading
   el['ocr-progress'].hidden = !ocrBusy
   el.stale.hidden = !isStale()
@@ -737,26 +801,62 @@ function renderChrome() {  const loading = state.phase === 'loading'
 
   el['view-toggle'].disabled = state.output.length === 0
   el['view-toggle'].textContent = state.view === 'preview' ? 'Markdown' : '预览'
+  syncIconButtons()
+  syncMoreUi()
 
   el['auto-copy'].setAttribute('aria-checked', String(state.autoCopy))
   el['auto-copy'].classList.toggle('on', state.autoCopy)
 
   el['immediate'].setAttribute('aria-checked', String(state.immediate))
   el['immediate'].classList.toggle('on', state.immediate)
+  el['immediate-icon'].setAttribute('aria-checked', String(state.immediate))
+  el['immediate-icon'].classList.toggle('on', state.immediate)
+
+  el['auto-copy-icon'].setAttribute('aria-checked', String(state.autoCopy))
+  el['auto-copy-icon'].classList.toggle('on', state.autoCopy)
+
+  el['view-icon'].disabled = state.output.length === 0
+  el['view-icon'].title = state.view === 'preview' ? '切换到 Markdown' : '切换到预览'
+  el['view-icon'].innerHTML = state.view === 'preview' ? VIEW_EYE_ICON : VIEW_CODE_ICON
+
+  // 卡片图标按钮的 hover 提示
+  el['terms-icon'].dataset.tip = '术语 ' + state.terms.length + ' 条'
+  el['terms-icon-label'].textContent = '术语 ' + state.terms.length + ' 条'
+  if (el['mobile-terms-label'] !== null && el['mobile-terms-label'] !== undefined) {
+    el['mobile-terms-label'].textContent = '术语 ' + state.terms.length
+    el['mobile-translate'].disabled = el.translate.disabled
+  }
+  el['immediate-icon'].dataset.tip = state.immediate ? '粘贴后翻译：开' : '粘贴后翻译：关'
+  el['clear-icon'].dataset.tip = '清除'
+  el['auto-copy-icon'].dataset.tip = state.autoCopy ? '自动复制：开' : '自动复制：关'
+  el['view-icon'].dataset.tip = el['view-icon'].title
+  el['image-zoom-icon'].dataset.tip = '校验识别结果'
+  el['image-refresh'].dataset.tip = '重新识别'
 
   el.settings.hidden = !state.settingsOpen
   el['settings-toggle'].setAttribute('aria-expanded', String(state.settingsOpen))
-  el['settings-dot'].hidden = config.apiKey.length > 0
 
+  const narrow = window.matchMedia('(max-width: 768px)').matches
+  el['terms-label'].textContent = '术语 ' + state.terms.length + ' 条'
   el['terms-toggle'].textContent = state.termsOpen ? '收起' : '展开'
-  el['terms-body'].hidden = !state.termsOpen
   el['term-count'].textContent = String(state.terms.length)
+  el['terms-modal-count'].textContent = state.terms.length + ' 条'
+  el['terms-modal'].hidden = !(narrow && state.termsModalOpen)
+  el['terms-body'].hidden = narrow ? false : !state.termsOpen
+
+  // 同一套输入框/列表，按宽度挂到面板或弹窗里
+  const host = narrow ? el['terms-modal-body'] : el['terms-card']
+  if (el['terms-body'].parentElement !== host) host.appendChild(el['terms-body'])
+
+  el['terms-clear-modal'].disabled = state.terms.length === 0
   el['term-clear'].disabled = state.terms.length === 0
   el['term-add'].disabled = !(
     state.termSource.trim().length > 0 &&
     state.termTarget.trim().length > 0 &&
     state.terms.length < MAX_TERMS
   )
+  el['term-add-icon'].disabled = el['term-add'].disabled
+  el['term-add-foot'].disabled = el['term-add'].disabled
 }
 
 /* ---------------------------------------------------------------- 用量 */
@@ -859,11 +959,13 @@ function isUsagePopOpen() {
 
 function openUsagePop() {
   el['usage-pop'].hidden = false
+  el['usage-scrim'].hidden = false
   el['usage-chip'].setAttribute('aria-expanded', 'true')
 }
 
 function closeUsagePop() {
   el['usage-pop'].hidden = true
+  el['usage-scrim'].hidden = true
   el['usage-chip'].setAttribute('aria-expanded', 'false')
 }
 
@@ -881,11 +983,6 @@ function renderOutput() {
     const text = document.createElement('div')
     text.textContent = state.message
     box.appendChild(text)
-    const retry = document.createElement('wa-button')
-    retry.setAttribute('appearance', 'plain')
-    retry.textContent = '重试'
-    retry.addEventListener('click', () => void run())
-    box.appendChild(retry)
     out.replaceChildren(box)
     return
   }
@@ -964,7 +1061,7 @@ function renderTerms() {
     if (targetText.length > 0) {
       const arrow = document.createElement('span')
       arrow.className = 'term-arrow'
-      arrow.textContent = '翻译成'
+      arrow.textContent = window.matchMedia('(max-width: 480px)').matches ? '→' : '翻译成'
 
       const to = document.createElement('span')
       to.className = 'term-token'
@@ -1119,7 +1216,7 @@ async function run() {
   if (config.apiKey.length === 0) {
     state.settingsOpen = true
     renderChrome()
-    el['settings-hint'].textContent = '请先填写 API Key，再翻译。'
+    if (typeof el['api-key'].focus === 'function') el['api-key'].focus()
     el['api-key'].focus()
     // 设置面板可能被折叠或滚出视野，再补一条 Toast，避免用户以为按钮没反应
     showToast('未提供 API Key，请提供后再翻译。', 'warn')
@@ -1330,27 +1427,59 @@ async function refreshModels() {
   if (config.apiKey.length === 0) {
     state.models = []
     renderModels()
-    el['settings-hint'].textContent = '填写 API Key 后会自动读取可用模型。'
+    setModelStatus('idle', '')
     return
   }
 
-  el['settings-hint'].textContent = '正在读取模型列表…'
+  setModelStatus('loading', '正在读取模型列表…')
   try {
     const payload = await invokeTauri('models', { apiKey: config.apiKey, baseURL: config.baseURL })
     if (payload !== null && payload !== undefined && payload.ok === true && Array.isArray(payload.models)) {
       state.models = payload.models
       // 缓存一份，下次启动先用它把下拉框填上，不用等网络
       writeJsonStore(KEYS.models, { list: payload.models, savedAt: Date.now() })
-      el['settings-hint'].textContent =
-        payload.models.length > 0 ? '已读取 ' + payload.models.length + ' 个模型。' : '接口没有返回模型列表，将使用默认模型。'
+      setModelStatus(
+        'ok',
+        payload.models.length > 0
+          ? '已读取 ' + payload.models.length + ' 个模型'
+          : '接口没有返回模型列表，将使用默认模型',
+      )
     } else {
-      el['settings-hint'].textContent =
-        '模型列表读取失败：' + localizeError(payload?.error, '请检查 API Key 和接口地址。')
+      setModelStatus('fail', modelStatusFailure(payload?.error))
     }
   } catch (error) {
-    el['settings-hint'].textContent = '模型列表读取失败：请检查网络后重试。'
+    setModelStatus('fail', '模型列表读取失败：请检查网络后重试。')
   }
   renderModels()
+}
+
+/**
+ * 模型列表失败的文案。
+ * 这里就是「设置」弹窗，所以 Key 无效时不再重复提示「请在『设置』里检查」；
+ * 翻译过程的 Toast 仍然走 localizeError，保留那句指引。
+ */
+function modelStatusFailure(error) {
+  const code = String(error?.code ?? '')
+  if (code === 'UNAUTHORIZED' || code === 'NO_KEY') return '模型列表读取失败：API Key 无效'
+  return '模型列表读取失败：' + localizeError(error, '请检查 API Key 和接口地址。')
+}
+
+const VIEW_CODE_ICON =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.6 7.2 4.4 12l4.2 4.8" /><path d="M15.4 7.2 19.6 12l-4.2 4.8" /></svg>'
+const VIEW_EYE_ICON =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.6 12S5.8 6.4 12 6.4 21.4 12 21.4 12 18.2 17.6 12 17.6 2.6 12 2.6 12Z" /><circle cx="12" cy="12" r="2.6" /></svg>'
+
+/** 模型列表状态：idle / loading / ok / fail，显示在「接口地址」标签右边 */
+function setModelStatus(kind, text) {
+  const box = el['model-status']
+  if (box === null || box === undefined) return
+  box.hidden = kind === 'idle'
+  box.classList.remove('is-ok', 'is-fail', 'is-loading')
+  if (kind === 'ok') box.classList.add('is-ok')
+  if (kind === 'fail') box.classList.add('is-fail')
+  if (kind === 'loading') box.classList.add('is-loading')
+  el['model-status-text'].textContent = text
+  box.title = kind === 'fail' ? text : ''
 }
 
 /** 启动时先用上次缓存的模型列表渲染，避免下拉框空着 */
@@ -1373,6 +1502,14 @@ function contextRegion(event) {
   for (const node of path) {
     if (node === null || node === undefined) continue
     if (node.id === 'source') return 'source'
+    if (
+      node.id === 'image-preview' ||
+      node.id === 'image-thumb' ||
+      node.id === 'image-name' ||
+      node.id === 'image-size'
+    ) {
+      return 'image'
+    }
     if (node.id === 'output' || node.id === 'verify-preview') return 'output'
     if (node.id === 'api-key' || node.id === 'api-key-legacy') return 'key'
     if (typeof node.tagName !== 'string') continue
@@ -1506,6 +1643,26 @@ function buildContextItems(region, event) {
       run: () => {
         el['image-input'].click()
       },
+    })
+    return items
+  }
+
+  if (region === 'image') {
+    const hasImage = state.image !== null
+    items.push({
+      label: '删除',
+      disabled: !hasImage,
+      run: () => clearImage(),
+    })
+    items.push({
+      label: '校验',
+      disabled: !hasImage,
+      run: () => void openVerify(),
+    })
+    items.push({
+      label: '重新识别',
+      disabled: !hasImage || state.ocrBusy,
+      run: () => refreshOcr(),
     })
     return items
   }
@@ -1667,7 +1824,9 @@ function renderSizeBadge() {
 function initSizeBadge() {
   if (__FISH_DEBUG__ !== true) return
 
-  const enabled = readStore('fish-app.debug-size') === '1'
+  // debug 构建默认就显示，按 Ctrl+Shift+D 可以关掉
+  const stored = readStore('fish-app.debug-size')
+  const enabled = stored === null ? true : stored === '1'
 
   const badge = document.createElement('div')
   badge.id = 'size-badge'
@@ -1721,9 +1880,24 @@ function bind() {
 
   document.addEventListener('keydown', handleContextMenuKeydown)
 
+  // 设置弹窗：Esc 关闭
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && state.termsModalOpen) {
+    state.termsModalOpen = false
+    renderChrome()
+    return
+  }
+
+  if (event.key !== 'Escape' || !state.settingsOpen) return
+    state.settingsOpen = false
+    renderChrome()
+  })
+
   window.addEventListener('blur', hideContextMenu)
   window.addEventListener('resize', hideContextMenu)
   document.addEventListener('scroll', hideContextMenu, true)
+  el['usage-scrim'].addEventListener('click', () => closeUsagePop())
+
   el['usage-chip'].addEventListener('click', (event) => {
     event.stopPropagation()
     if (isUsagePopOpen()) {
@@ -1807,12 +1981,21 @@ function bind() {
   el['image-thumb'].addEventListener('click', () => void openVerify())
   el['image-refresh'].addEventListener('click', refreshOcr)
   el['image-zoom'].addEventListener('click', () => void openVerify())
+  el['image-zoom-icon'].addEventListener('click', () => void openVerify())
 
   el['verify-overlay'].addEventListener('click', (event) => {
     if (event.target === el['verify-overlay']) closeVerify()
   })
   el['verify-save'].addEventListener('click', saveVerify)
   el['verify-close'].addEventListener('click', () => closeVerify())
+  el['verify-abandon'].addEventListener('click', () => closeVerify())
+  el['verify-save-bottom'].addEventListener('click', saveVerify)
+  el['verify-expand'].addEventListener('click', () => {
+    const stage = el['verify-stage']
+    const full = stage.classList.toggle('is-full')
+    el['verify-expand'].textContent = full ? '⤢ 收起' : '⤢ 放大'
+  })
+
   el['verify-view'].addEventListener('click', () => {
     verifyView = verifyView === 'preview' ? 'edit' : 'preview'
     renderVerifyView()
@@ -1829,7 +2012,8 @@ function bind() {
   /* 图片区域：滚轮缩放 + 拖拽平移（缩放控件与关闭按钮上的操作不参与） */
   const stage = el['verify-stage']
   const isStageControl = (target) =>
-    target instanceof Element && target.closest('.verify-zoom, .verify-head-close') !== null
+    target instanceof Element &&
+    target.closest('.verify-zoom, .verify-head-close, .verify-expand') !== null
 
   stage.addEventListener(
     'wheel',
@@ -1904,7 +2088,7 @@ function bind() {
   })
 
   el.translate.addEventListener('click', () => void run())
-  el.clear.addEventListener('click', () => {
+  function clearAll() {
     state.runId += 1
     state.input = ''
     state.output = ''
@@ -1921,25 +2105,193 @@ function bind() {
     syncHighlight()
     render()
     el.source.focus()
-  })
+  }
+
+  el.clear.addEventListener('click', clearAll)
 
   el.copy.addEventListener('click', () => void copyText(state.output))
 
-  el['view-toggle'].addEventListener('click', () => {
+  function toggleView() {
     state.view = state.view === 'preview' ? 'source' : 'preview'
     render()
-  })
+  }
 
-  el['auto-copy'].addEventListener('click', () => {
+  el['view-toggle'].addEventListener('click', toggleView)
+  el['view-icon'].addEventListener('click', toggleView)
+
+  function toggleAutoCopy() {
     state.autoCopy = !state.autoCopy
     writeStore(KEYS.autoCopy, state.autoCopy ? '1' : '0')
     renderChrome()
-  })
+  }
 
-  el['immediate'].addEventListener('click', () => {
+  el['auto-copy'].addEventListener('click', toggleAutoCopy)
+  el['auto-copy-icon'].addEventListener('click', toggleAutoCopy)
+
+  function toggleImmediate() {
     state.immediate = !state.immediate
     writeStore(KEYS.immediate, state.immediate ? '1' : '0')
     renderChrome()
+  }
+
+  el['immediate'].addEventListener('click', toggleImmediate)
+  el['immediate-icon'].addEventListener('click', toggleImmediate)
+
+  // 图标版「清除」和文字版走同一个函数
+  el['clear-icon'].addEventListener('click', clearAll)
+
+  el['terms-trigger'].addEventListener('click', () => {
+    state.termsModalOpen = true
+    renderChrome()
+    el['term-source'].focus()
+  })
+
+  // 手机底部操作条
+  el['mobile-image'].addEventListener('click', () => el['image-input'].click())
+
+  el['mobile-terms'].addEventListener('click', () => {
+    state.termsModalOpen = true
+    renderChrome()
+    el['term-source'].focus()
+  })
+
+  el['mobile-translate'].addEventListener('click', () => {
+    if (el['mobile-translate'].disabled) return
+    void run()
+  })
+
+  // 触屏长按 = 右键：向落点补发一个 contextmenu，复用现有菜单逻辑
+  let longPressTimer = 0
+  let longPressOrigin = null
+
+  document.addEventListener(
+    'pointerdown',
+    (event) => {
+      if (event.pointerType !== 'touch') return
+      longPressOrigin = { x: event.clientX, y: event.clientY, target: event.target }
+      window.clearTimeout(longPressTimer)
+      longPressTimer = window.setTimeout(() => {
+        const origin = longPressOrigin
+        longPressOrigin = null
+        if (origin === null) return
+        origin.target.dispatchEvent(
+          new MouseEvent('contextmenu', {
+            bubbles: true,
+            cancelable: true,
+            button: 2,
+            clientX: origin.x,
+            clientY: origin.y,
+          }),
+        )
+      }, 500)
+    },
+    { passive: true },
+  )
+
+  document.addEventListener(
+    'pointermove',
+    (event) => {
+      if (longPressOrigin === null) return
+      if (
+        Math.abs(event.clientX - longPressOrigin.x) > 8 ||
+        Math.abs(event.clientY - longPressOrigin.y) > 8
+      ) {
+        window.clearTimeout(longPressTimer)
+        longPressOrigin = null
+      }
+    },
+    { passive: true },
+  )
+
+  for (const type of ['pointerup', 'pointercancel']) {
+    document.addEventListener(
+      type,
+      () => {
+        window.clearTimeout(longPressTimer)
+        longPressOrigin = null
+      },
+      { passive: true },
+    )
+  }
+
+  el['more-btn'].addEventListener('click', (event) => {
+    event.stopPropagation()
+    if (state.moreMenuOpen) closeMoreMenu()
+    else openMoreMenu()
+  })
+
+  // 点外部关闭「更多」菜单
+  document.addEventListener('mousedown', (event) => {
+    if (!state.moreMenuOpen) return
+    if (el['more-menu'].contains(event.target)) return
+    if (el['more-btn'].contains(event.target)) return
+    closeMoreMenu()
+  })
+
+  // Esc：先关菜单，再关各弹窗
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return
+    if (state.moreMenuOpen) {
+      closeMoreMenu()
+      return
+    }
+    if (!state.modelPickerOpen && !state.themePickerOpen && !state.balanceOpen) return
+    state.modelPickerOpen = false
+    state.themePickerOpen = false
+    state.balanceOpen = false
+    renderChrome()
+  })
+
+  el['model-modal-x'].addEventListener('click', () => {
+    state.modelPickerOpen = false
+    renderChrome()
+  })
+  el['model-modal-cancel'].addEventListener('click', () => {
+    state.modelPickerOpen = false
+    renderChrome()
+  })
+  el['model-modal-done'].addEventListener('click', () => {
+    state.modelPickerOpen = false
+    state.selectedModel = state.pendingModel
+    config.model = state.pendingModel
+    saveSettings()
+    renderModels()
+    renderChrome()
+  })
+
+  el['theme-modal-x'].addEventListener('click', () => {
+    state.themePickerOpen = false
+    renderChrome()
+  })
+  el['theme-modal-done'].addEventListener('click', () => {
+    state.themePickerOpen = false
+    renderChrome()
+  })
+
+  el['balance-modal-x'].addEventListener('click', () => {
+    state.balanceOpen = false
+    renderChrome()
+  })
+  el['balance-modal-ok'].addEventListener('click', () => {
+    state.balanceOpen = false
+    renderChrome()
+  })
+  el['balance-modal-refresh'].addEventListener('click', () => void refreshBalance(true))
+
+  for (const id of ['model-modal', 'theme-modal', 'balance-modal']) {
+    el[id].addEventListener('mousedown', (event) => {
+      if (event.target !== el[id]) return
+      if (id === 'model-modal') state.modelPickerOpen = false
+      else if (id === 'theme-modal') state.themePickerOpen = false
+      else state.balanceOpen = false
+      renderChrome()
+    })
+  }
+
+  el['terms-icon'].addEventListener('click', () => {
+    state.termsModalOpen = true
+    renderChrome()
+    el['term-source'].focus()
   })
 
   el['terms-toggle'].addEventListener('click', () => {
@@ -1948,6 +2300,35 @@ function bind() {
     renderChrome()
   })
 
+  el['terms-x'].addEventListener('click', () => {
+    state.termsModalOpen = false
+    renderChrome()
+  })
+
+  el['terms-done'].addEventListener('click', () => {
+    state.termsModalOpen = false
+    renderChrome()
+  })
+
+  el['terms-modal'].addEventListener('mousedown', (event) => {
+    if (event.target !== el['terms-modal']) return
+    state.termsModalOpen = false
+    renderChrome()
+  })
+
+  el['terms-clear-modal'].addEventListener('click', () => {
+    // 和面板上的「清空」一致：先弹二次确认，不直接关掉术语弹窗
+    if (state.terms.length === 0) return
+    state.confirmClear = true
+    el['confirm-modal'].open = true
+  })
+
+  // 宽度跨过 768 时，编辑区要在面板和弹窗之间搬回去/搬过来，
+  // 所以每次 resize 都要重渲染（否则宽屏面板会只剩一个空壳）
+  window.addEventListener('resize', () => {
+    if (!window.matchMedia('(max-width: 768px)').matches) state.termsModalOpen = false
+    renderChrome()
+  })
   el['term-clear'].addEventListener('click', () => {
     if (state.terms.length === 0) return
     state.confirmClear = true
@@ -1987,13 +2368,22 @@ function bind() {
     })
   }
   el['term-add'].addEventListener('click', addTerm)
+  el['term-add-icon'].addEventListener('click', addTerm)
+  el['term-add-foot'].addEventListener('click', addTerm)
 
   el['settings-toggle'].addEventListener('click', () => {
     state.settingsOpen = !state.settingsOpen
     renderChrome()
   })
 
-  el['close-settings'].addEventListener('click', () => {
+  el['settings-x'].addEventListener('click', () => {
+    state.settingsOpen = false
+    renderChrome()
+  })
+
+  // 点遮罩空白处关闭（点面板内部不关）
+  el['settings'].addEventListener('mousedown', (event) => {
+    if (event.target !== el['settings']) return
     state.settingsOpen = false
     renderChrome()
   })
@@ -2037,6 +2427,57 @@ function bind() {
   })
 
   bindWindowControls()
+
+  el['settings-icon-btn'].addEventListener('click', () => {
+    state.settingsOpen = true
+    renderChrome()
+  })
+
+  el['model-icon-btn'].addEventListener('click', (event) => {
+    event.stopPropagation()
+    toggleIconMenu('model')
+  })
+
+  el['theme-icon-btn'].addEventListener('click', (event) => {
+    event.stopPropagation()
+    toggleIconMenu('theme')
+  })
+
+  const tipButtons = [
+    el['model-icon-btn'],
+    el['theme-icon-btn'],
+    el['settings-icon-btn'],
+    el['terms-icon'],
+    el['immediate-icon'],
+    el['clear-icon'],
+    el['auto-copy-icon'],
+    el['view-icon'],
+    el['image-refresh'],
+    el['image-zoom-icon'],
+  ]
+
+  for (const button of tipButtons) {
+    button.addEventListener('mouseenter', () => showToolbarTip(button))
+    button.addEventListener('mouseleave', hideToolbarTip)
+    button.addEventListener('blur', hideToolbarTip)
+    button.addEventListener('click', hideToolbarTip)
+  }
+
+  document.addEventListener('click', (event) => {
+    if (state.openIconMenu === null) return
+    const menu = el[state.openIconMenu + '-menu']
+    if (menu.contains(event.target)) return
+    closeIconMenu()
+  })
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeIconMenu()
+  })
+
+  window.addEventListener('resize', () => {
+    hideToolbarTip()
+    closeIconMenu()
+  })
 
   el['model-select'].addEventListener('change', () => {
     state.selectedModel = el['model-select'].value
@@ -2134,6 +2575,7 @@ function renderVerifyView() {
 
 /** 打开校验弹窗：整页大小的浮层，上面看图片、下面改文字 */
 function openVerify() {
+  resetVerifyStage()
   if (state.image === null) return
   el['verify-image'].src = state.image.dataUrl
   el['verify-editor'].value = state.input
@@ -2147,6 +2589,15 @@ function openVerify() {
 /** 弹窗里的文字有没有改过 */
 function verifyDirty() {
   return !el['verify-overlay'].hidden && el['verify-editor'].value !== state.input
+}
+
+function resetVerifyStage() {
+  const stage = el['verify-stage']
+  if (stage === null || stage === undefined) return
+  stage.classList.remove('is-full')
+  if (el['verify-expand'] !== null && el['verify-expand'] !== undefined) {
+    el['verify-expand'].textContent = '⤢ 放大'
+  }
 }
 
 function closeVerify(force = false) {
@@ -2269,12 +2720,20 @@ function dataUrlMime(dataUrl) {
 
 /** 对给定图片跑一次 OCR，把结果写进输入框 */
 async function runOcr(dataUrl, name, mime) {
+  // 只要这次识别结束（成功 / 空结果 / 报错），都应该把「重新识别」露出来
+  const failEarly = (message) => {
+    state.ocrBusy = false
+    state.ocrDone = true
+    renderChrome()
+    ocrFail(message)
+  }
+
   if (!usesDeepSeekEndpoint()) {
-    ocrFail(OCR_UNSUPPORTED)
+    failEarly(OCR_UNSUPPORTED)
     return
   }
   if (config.apiKey.length === 0) {
-    ocrFail('请先在「设置」里填写 API Key。')
+    failEarly('请先在「设置」里填写 API Key。')
     return
   }
 
@@ -2282,7 +2741,7 @@ async function runOcr(dataUrl, name, mime) {
   const comma = text.indexOf(',')
   const data = comma >= 0 ? text.slice(comma + 1) : text
   if (data.length === 0) {
-    ocrFail('图片数据为空，请重新选一张图片。')
+    failEarly('图片数据为空，请重新选一张图片。')
     return
   }
 
@@ -2298,11 +2757,10 @@ async function runOcr(dataUrl, name, mime) {
     data,
   })
 
+  // 先标记完成，再渲染，这样下面的任何分支都不会把「重新识别」藏起来
   state.ocrBusy = false
-  // 出错时下面会提前 return，所以先收掉进度条
-  renderChrome()
-  // 请求有结果了（成功或失败都算），此时才显示「刷新」
   state.ocrDone = true
+  renderChrome()
 
   if (payload === null || payload === undefined || payload.ok !== true) {
     ocrFail(ocrErrorMessage(payload?.error))
@@ -2427,6 +2885,307 @@ function renderThemeSelect() {
   }
   select.value = state.theme
   ensureSelectChevron(select)
+}
+
+/* ------------------------------------------------- 窄窗口图标按钮（模型 / 主题） */
+
+const THEME_ICONS = {
+  // 跟随系统：半填充圆
+  auto: '<circle cx="8" cy="8" r="5.6" /><path class="icon-fill" d="M8 2.4a5.6 5.6 0 0 1 0 11.2z" />',
+  // 浅色：空心圆 + 光线
+  b: '<circle cx="8" cy="8" r="3.4" /><path d="M8 1.2v1.6M8 13.2v1.6M1.2 8h1.6M13.2 8h1.6M3.2 3.2l1.1 1.1M11.7 11.7l1.1 1.1M12.8 3.2l-1.1 1.1M4.3 11.7l-1.1 1.1" />',
+  // 深色：实心圆（月相）
+  a: '<circle cx="8" cy="8" r="5.4" class="icon-fill" />',
+  // 风格化：半填充 + 直角
+  c: '<rect x="2.6" y="2.6" width="10.8" height="10.8" /><path class="icon-fill" d="M13.4 2.6v10.8H2.6z" />',
+  // 蓝色大肥鱼：半填充 + 圆
+  d: '<circle cx="8" cy="8" r="5.6" /><path class="icon-fill" d="M8 2.4a5.6 5.6 0 0 1 0 11.2z" />',
+}
+
+/* ------------------------------------------------- 640 以下的「更多」菜单 */
+
+const MORE_ICONS = {
+  model:
+    '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2 14 5.2 8 8.4 2 5.2z" /><path d="M2 8.2 8 11.4 14 8.2" /><path d="M2 11.2 8 14.4 14 11.2" /></svg>',
+  theme:
+    '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.6" /><path d="M8 2.4a5.6 5.6 0 0 1 0 11.2z" fill="currentColor" stroke="none" /></svg>',
+  settings:
+    '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.4" /><path d="M8 1.4v2M8 12.6v2M1.4 8h2M12.6 8h2M3.3 3.3l1.4 1.4M11.3 11.3l1.4 1.4M12.7 3.3l-1.4 1.4M4.7 11.3l-1.4 1.4" /></svg>',
+  balance:
+    '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="4.6" width="12" height="6.8" rx="1.4" /><circle cx="8" cy="8" r="1.6" /></svg>',
+}
+
+function currentModelId() {
+  return state.selectedModel || config.model || DEFAULT_MODEL
+}
+
+function closeMoreMenu() {
+  if (!state.moreMenuOpen) return
+  state.moreMenuOpen = false
+  el['more-menu'].hidden = true
+  el['more-btn'].classList.remove('is-open')
+  el['more-btn'].setAttribute('aria-expanded', 'false')
+}
+
+function moreMenuItems() {
+  const balanceText = String(el.balance.textContent || '').replace(/^余额\s*/, '')
+  return [
+    { key: 'model', label: '模型', value: currentModelId() },
+    { key: 'theme', label: '主题', value: themeName(state.theme) },
+    { key: 'settings', label: '设置', value: '' },
+    { key: 'balance', label: '余额', value: balanceText },
+  ]
+}
+
+function openMoreMenu() {
+  closeMoreMenu()
+  state.moreMenuOpen = true
+  const menu = el['more-menu']
+  menu.replaceChildren()
+  for (const item of moreMenuItems()) {
+    const row = document.createElement('div')
+    row.className = 'more-item'
+    row.setAttribute('role', 'menuitem')
+    const ico = document.createElement('span')
+    ico.className = 'ico'
+    ico.innerHTML = MORE_ICONS[item.key]
+    const label = document.createElement('span')
+    label.textContent = item.label
+    row.append(ico, label)
+    if (item.value.length > 0) {
+      const val = document.createElement('span')
+      val.className = 'val'
+      val.textContent = item.value
+      row.appendChild(val)
+    }
+    row.addEventListener('click', () => {
+      closeMoreMenu()
+      if (item.key === 'model') openModelPicker()
+      else if (item.key === 'theme') openThemePicker()
+      else if (item.key === 'settings') state.settingsOpen = true
+      else openBalanceModal()
+      renderChrome()
+    })
+    menu.appendChild(row)
+  }
+  menu.hidden = false
+  el['more-btn'].classList.add('is-open')
+  el['more-btn'].setAttribute('aria-expanded', 'true')
+}
+
+function openModelPicker() {
+  state.pendingModel = currentModelId()
+  state.modelPickerOpen = true
+}
+
+function openThemePicker() {
+  state.pendingTheme = state.theme
+  state.themePickerOpen = true
+}
+
+function openBalanceModal() {
+  state.balanceOpen = true
+}
+
+function renderPickerLists() {
+  const modelList = el['model-modal-list']
+  modelList.replaceChildren()
+  const models = state.models.length > 0 ? state.models : [{ id: currentModelId() }]
+  for (const item of models) {
+    const row = document.createElement('div')
+    row.className = 'picker-item' + (item.id === state.pendingModel ? ' is-current' : '')
+    row.setAttribute('role', 'option')
+    row.setAttribute('aria-selected', String(item.id === state.pendingModel))
+    const tick = document.createElement('span')
+    tick.className = 'tick'
+    if (item.id === state.pendingModel) {
+      tick.innerHTML =
+        '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.4 4.8 9 10 3.2" /></svg>'
+    }
+    const label = document.createElement('span')
+    label.textContent = item.id
+    row.append(tick, label)
+    row.addEventListener('click', () => {
+      state.pendingModel = item.id
+      renderChrome()
+    })
+    modelList.appendChild(row)
+  }
+
+  const themeList = el['theme-modal-list']
+  themeList.replaceChildren()
+  for (const item of THEMES) {
+    const row = document.createElement('div')
+    row.className = 'picker-item' + (item.id === state.pendingTheme ? ' is-current' : '')
+    row.setAttribute('role', 'option')
+    row.setAttribute('aria-selected', String(item.id === state.pendingTheme))
+    const tick = document.createElement('span')
+    tick.className = 'tick'
+    if (item.id === state.pendingTheme) {
+      tick.innerHTML =
+        '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.4 4.8 9 10 3.2" /></svg>'
+    }
+    const label = document.createElement('span')
+    label.textContent = item.name
+    row.append(tick, label)
+    row.addEventListener('click', () => {
+      // 主题点一下就生效，弹窗留着让用户继续比较
+      state.pendingTheme = item.id
+      applyTheme(item.id)
+      writeStore(KEYS.theme, state.theme)
+      renderChrome()
+    })
+    themeList.appendChild(row)
+  }
+}
+
+function syncMoreUi() {
+  el['model-modal'].hidden = !state.modelPickerOpen
+  el['theme-modal'].hidden = !state.themePickerOpen
+  el['balance-modal'].hidden = !state.balanceOpen
+  if (state.modelPickerOpen || state.themePickerOpen) renderPickerLists()
+  if (state.balanceOpen) {
+    el['balance-amount'].textContent =
+      String(el.balance.textContent || '').replace(/^余额\s*/, '') || '--'
+  }
+}
+
+let toolbarTipTimer = 0
+let toolbarTipEl = null
+
+function currentThemeIcon() {
+  const id = state.theme === 'auto' ? 'auto' : state.theme
+  return THEME_ICONS[id] || THEME_ICONS.auto
+}
+
+function syncIconButtons() {
+  const themeButton = el['theme-icon-btn']
+  if (themeButton !== null && themeButton !== undefined) {
+    const svg = themeButton.querySelector('svg')
+    if (svg !== null) svg.innerHTML = currentThemeIcon()
+    themeButton.dataset.tip = '主题：' + themeName(state.theme)
+  }
+  const settingsButton = el['settings-icon-btn']
+  if (settingsButton !== null && settingsButton !== undefined) {
+    settingsButton.dataset.tip = '设置'
+  }
+  const modelButton = el['model-icon-btn']
+  if (modelButton !== null && modelButton !== undefined) {
+    modelButton.dataset.tip = '模型：' + (state.selectedModel || config.model || DEFAULT_MODEL)
+  }
+}
+
+function themeName(id) {
+  const found = THEMES.find((item) => item.id === id)
+  return found === undefined ? '跟随系统' : found.name
+}
+
+function modelMenuItems() {
+  const list = state.models.length > 0 ? state.models : [{ id: config.model || DEFAULT_MODEL }]
+  return list.map((item) => ({ id: item.id, label: item.id }))
+}
+
+function themeMenuItems() {
+  return THEMES.map((item) => ({ id: item.id, label: item.name }))
+}
+
+function closeIconMenu() {
+  if (state.openIconMenu === null) return
+  state.openIconMenu = null
+  el['model-menu'].hidden = true
+  el['theme-menu'].hidden = true
+  el['model-icon-btn'].classList.remove('is-open')
+  el['theme-icon-btn'].classList.remove('is-open')
+  el['model-icon-btn'].setAttribute('aria-expanded', 'false')
+  el['theme-icon-btn'].setAttribute('aria-expanded', 'false')
+}
+
+function openIconMenu(kind) {
+  closeIconMenu()
+  state.openIconMenu = kind
+  const menu = el[kind + '-menu']
+  const button = el[kind + '-icon-btn']
+  const items = kind === 'model' ? modelMenuItems() : themeMenuItems()
+  const current = kind === 'model' ? state.selectedModel || config.model : state.theme
+
+  menu.replaceChildren()
+  for (const item of items) {
+    const row = document.createElement('div')
+    row.className = 'icon-menu-item' + (item.id === current ? ' is-current' : '')
+    row.setAttribute('role', 'menuitem')
+    const tick = document.createElement('span')
+    tick.className = 'tick'
+    if (item.id === current) {
+      tick.innerHTML =
+        '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.4 4.8 9 10 3.2" /></svg>'
+    }
+    const label = document.createElement('span')
+    label.textContent = item.label
+    row.append(tick, label)
+    row.addEventListener('click', () => {
+      closeIconMenu()
+      if (kind === 'model') {
+        state.selectedModel = item.id
+        config.model = item.id
+        saveSettings()
+        // 宽屏用的是下拉框，切窄窗口后它仍然存在，必须一起同步
+        renderModels()
+        renderChrome()
+      } else {
+        applyTheme(item.id)
+        writeStore(KEYS.theme, state.theme)
+        renderChrome()
+      }
+    })
+    menu.appendChild(row)
+  }
+
+  menu.hidden = false
+  menu.classList.remove('is-right')
+  button.classList.add('is-open')
+  button.setAttribute('aria-expanded', 'true')
+
+  // 靠近窗口右边时改成右对齐，避免菜单出界
+  const rect = menu.getBoundingClientRect()
+  if (rect.right > window.innerWidth - 8) menu.classList.add('is-right')
+}
+
+function toggleIconMenu(kind) {
+  if (state.openIconMenu === kind) {
+    closeIconMenu()
+  } else {
+    openIconMenu(kind)
+  }
+}
+
+function showToolbarTip(button) {
+  const text = button.dataset.tip
+  if (typeof text !== 'string' || text.length === 0) return
+  hideToolbarTip()
+  toolbarTipTimer = window.setTimeout(() => {
+    toolbarTipTimer = 0
+    if (toolbarTipEl === null) {
+      toolbarTipEl = document.createElement('div')
+      toolbarTipEl.className = 'toolbar-tip'
+      document.body.appendChild(toolbarTipEl)
+    }
+    const rect = button.getBoundingClientRect()
+    toolbarTipEl.textContent = text
+    toolbarTipEl.hidden = false
+    const tipRect = toolbarTipEl.getBoundingClientRect()
+    const left = Math.round(rect.left + rect.width / 2 - tipRect.width / 2)
+    const top = Math.round(rect.top - tipRect.height - 8)
+    toolbarTipEl.style.left = Math.max(6, left) + 'px'
+    toolbarTipEl.style.top = Math.max(6, top) + 'px'
+  }, 200)
+}
+
+function hideToolbarTip() {
+  if (toolbarTipTimer !== 0) {
+    window.clearTimeout(toolbarTipTimer)
+    toolbarTipTimer = 0
+  }
+  if (toolbarTipEl !== null) toolbarTipEl.hidden = true
 }
 
 /** 原文 / 译文语言下拉 */

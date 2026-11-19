@@ -30,9 +30,8 @@ echo Building frontend ^(esbuild^) ...
 call npm run build
 if errorlevel 1 (echo Frontend build failed. & pause & exit /b 1)
 
-cd /d "%~dp0src-tauri"
-echo Building release exe ...
-cargo build --release
+echo Building installer ^(NSIS^) ...
+call npx tauri build
 if errorlevel 1 (
   echo.
   echo   Build failed. Send the error above.
@@ -41,14 +40,24 @@ if errorlevel 1 (
   exit /b 1
 )
 
-set "DEST=%LOCALAPPDATA%\Programs\Fish翻译"
-if not exist "%DEST%" mkdir "%DEST%"
-copy /y "target\release\fish-translate.exe" "%DEST%\fish-translate.exe" >nul
+rem Collect the newest installer into .\build\ (created on demand, ignored by git).
+rem The bundle folder keeps older versions around, so only copy the latest one.
+if not exist "build" mkdir "build"
+powershell -NoProfile -Command "$src = Get-ChildItem 'src-tauri\target\release\bundle\nsis\*.exe' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1; if (-not $src) { exit 1 }; Get-ChildItem 'build\*.exe' -ErrorAction SilentlyContinue | Remove-Item -Force; Copy-Item $src.FullName 'build\' -Force"
+if errorlevel 1 (
+  echo.
+  echo   Installer not found under src-tauri\target\release\bundle\nsis\
+  echo.
+  pause
+  exit /b 1
+)
 
 echo.
-echo   Installed: %DEST%\fish-translate.exe
+echo   Installer copied to .\build\
 echo.
-echo   IMPORTANT: run it from there, NOT from this workspace folder.
-echo   DSH sandbox ACLs on the workspace make WebView2 crash at startup.
+dir /b "build\*.exe"
+echo.
+echo   Double-click the .exe above to install.
+echo   This script does NOT install anything by itself.
 echo.
 pause
