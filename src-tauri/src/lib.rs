@@ -445,8 +445,11 @@ async fn clipboard_write(request: ClipboardWriteRequest) -> Value {
 
 /// 前端把首屏渲染完之后调用：这时才把窗口显示出来，避免启动时闪白
 #[tauri::command]
-fn app_ready(window: tauri::Window) -> Value {
+fn app_ready(window: tauri::WebviewWindow) -> Value {
+    // 显示前后各应用一次：WebView2 首帧时可能把窗口尺寸改回配置里的默认值
+    restore_window_size(&window);
     let _ = window.show();
+    restore_window_size(&window);
     let _ = window.set_focus();
     json!({ "ok": true })
 }
@@ -485,6 +488,26 @@ fn save_window_size(window: &tauri::WebviewWindow) {
     let _ = std::fs::write(path, body.to_string());
 }
 
+static LAST_SAVE_MS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+fn now_ms() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|elapsed| elapsed.as_millis() as u64)
+        .unwrap_or(0)
+}
+
+/// 拖动 / 缩放过程中顺带存一下，最多每 700ms 写一次盘
+fn save_window_size_throttled(window: &tauri::WebviewWindow) {
+    let now = now_ms();
+    let last = LAST_SAVE_MS.load(std::sync::atomic::Ordering::Relaxed);
+    if now.saturating_sub(last) < 700 {
+        return;
+    }
+    LAST_SAVE_MS.store(now, std::sync::atomic::Ordering::Relaxed);
+    save_window_size(window);
+}
+
 /// 位置是否还落在某块显示器上（至少露出 120×80，避免整窗跑到屏幕外）
 fn position_is_visible(window: &tauri::WebviewWindow, x: i32, y: i32, w: i32, h: i32) -> bool {
     let Ok(monitors) = window.available_monitors() else { return false };
@@ -497,10 +520,9 @@ fn position_is_visible(window: &tauri::WebviewWindow, x: i32, y: i32, w: i32, h:
     })
 }
 
-/// 启动时按上次保存的尺寸和位置恢复；数值不合理就当作没有记录
-fn restore_window_size(app: &tauri::App) {
-    let Some(window) = app.get_webview_window("main") else { return };
-    let Some(path) = window_size_file(&app.handle()) else { return };
+/// 按上次保存的尺寸和位置恢复；数值不合理就当作没有记录
+fn restore_window_size(window: &tauri::WebviewWindow) {
+    let Some(path) = window_size_file(&window.app_handle()) else { return };
     let Ok(content) = std::fs::read_to_string(path) else { return };
     let Ok(value) = serde_json::from_str::<Value>(&content) else { return };
     let width = value.get("width").and_then(Value::as_f64).unwrap_or(0.0);
@@ -558,7 +580,9 @@ pub fn run() {    // GUI 版没有控制台，把 panic 文本落盘，方便事
             app_ready
         ])
         .setup(|app| {
-            restore_window_size(app);
+            if let Some(window) = app.get_webview_window("main") {
+                restore_window_size(&window);
+            }
             // 兜底：前端万一没跑起来也别留一个看不见的进程
             let handle = app.handle().clone();
             std::thread::spawn(move || {
@@ -574,10 +598,16 @@ pub fn run() {    // GUI 版没有控制台，把 panic 文本落盘，方便事
 
     app.run(|app_handle, event| {
         if let tauri::RunEvent::WindowEvent { label, event, .. } = &event {
-            if label == "main" && matches!(event, tauri::WindowEvent::CloseRequested { .. }) {
-                if let Some(window) = app_handle.get_webview_window("main") {
-                    save_window_size(&window);
+            if label != "main" {
+                return;
+            }
+            let Some(window) = app_handle.get_webview_window("main") else { return };
+            match event {
+                tauri::WindowEvent::CloseRequested { .. } => save_window_size(&window),
+                tauri::WindowEvent::Resized(_) | tauri::WindowEvent::Moved(_) => {
+                    save_window_size_throttled(&window)
                 }
+                _ => {}
             }
         }
     });
