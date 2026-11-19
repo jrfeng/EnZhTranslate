@@ -216,8 +216,10 @@
                 <div class="terms-add">
                   <wa-input id="term-source" placeholder="术语" aria-label="术语" size="s" appearance="outlined" class="term-field" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></wa-input>
                   <span class="term-join">翻译成</span>
+                  <span class="term-join-arrow" aria-hidden="true">→</span>
                   <wa-input id="term-target" placeholder="译法" aria-label="译法" size="s" appearance="outlined" class="term-field" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></wa-input>
                   <wa-button id="term-add" variant="brand" size="s" disabled>添加</wa-button>
+                  <button type="button" class="term-add-icon" id="term-add-icon" disabled aria-label="添加术语">+</button>
                 </div>
                 <div class="terms-list" id="terms-list"></div>
               </div>

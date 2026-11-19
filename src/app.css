@@ -3026,3 +3026,62 @@ input,
     max-height: none;
   }
 }
+
+
+/* 术语弹窗：手机宽度下的紧凑单行输入（≤480） */
+.term-join-arrow,
+.term-add-icon {
+  display: none;
+}
+
+@media (max-width: 480px) {
+  .terms-modal .terms-add {
+    gap: 6px;
+  }
+
+  .terms-modal .term-join {
+    display: none;
+  }
+
+  .terms-modal .term-join-arrow {
+    display: inline;
+    flex: 0 0 auto;
+    color: var(--app-muted);
+    font-size: 13px;
+  }
+
+  .terms-modal .terms-add .term-field {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  #term-add {
+    display: none;
+  }
+
+  .term-add-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 auto;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: var(--app-accent);
+    color: var(--app-accent-on);
+    font-family: inherit;
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  .term-add-icon:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .terms-modal .term {
+    min-height: 52px;
+  }
+}
