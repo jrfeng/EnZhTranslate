@@ -239,13 +239,16 @@
                     <span class="toggle-dot" aria-hidden="true"></span>
                     <span class="toggle-text">自动复制</span>
                   </button>
-                  <span class="stale" id="stale" hidden>需重新翻译</span>
                   <wa-button id="view-toggle" appearance="outlined" size="s" disabled>Markdown</wa-button>
                   <wa-button id="copy" appearance="outlined" size="s" disabled>复制</wa-button>
                 </div>
               </div>
               <div class="progress-line" id="progress" hidden aria-hidden="true">
                 <span class="progress-line-runner"></span>
+              </div>
+              <div class="stale-bar" id="stale" hidden>
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.6v7" /><circle cx="8" cy="12.6" r=".9" /></svg>
+                <span>需重新翻译</span>
               </div>
               <div class="output" id="output"></div>
               <div class="usage-foot" id="usage-foot" hidden>
