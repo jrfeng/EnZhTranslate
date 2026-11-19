@@ -1224,8 +1224,8 @@ wa-input.is-secret::part(input) {
   min-width: 30px;
   padding: 0;
   justify-content: center;
-  border: 1px solid var(--app-border);
-  border-radius: 4px;
+  border: var(--app-line) solid var(--app-border);
+  border-radius: var(--app-radius-sm);
   background: var(--app-panel);
   /* 和旁边的校验图标同色，否则同样线宽看起来更重 */
   color: var(--app-muted);
@@ -1245,7 +1245,7 @@ wa-input.is-secret::part(input) {
   flex: 0 0 auto;
   padding: 0;
   border: var(--app-line) solid var(--app-border);
-  border-radius: 4px;
+  border-radius: var(--app-radius-sm);
   background: var(--app-panel);
   color: var(--app-muted);
   cursor: pointer;
@@ -1254,6 +1254,15 @@ wa-input.is-secret::part(input) {
 /* 文字版「校验」已被图标取代 */
 #image-zoom {
   display: none;
+}
+
+/* 像素风主题里 wa-button 带硬阴影，图标按钮也补上，保持同款 */
+html[data-theme='c'] .image-strip-icon {
+  box-shadow: 2px 2px 0 #101010;
+}
+
+html[data-theme='d'] .image-strip-icon {
+  box-shadow: 2px 2px 0 #1b2a4a;
 }
 
 .image-strip-icon:hover {
