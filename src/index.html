@@ -288,6 +288,7 @@
       <div class="verify-dialog">
         <div class="verify-stage" id="verify-stage">
           <img id="verify-image" alt="待校验的图片" />
+          <button type="button" class="verify-expand" id="verify-expand">⤢ 放大</button>
           <div class="verify-zoom">
             <button type="button" class="verify-zoom-btn" id="zoom-out" title="缩小">−</button>
             <span class="verify-zoom-value" id="zoom-value">100%</span>
@@ -297,7 +298,8 @@
         </div>
         <div class="verify-panel">
           <div class="verify-head">
-            <span>识别文本 · 改完点「确认」</span>
+            <span class="verify-head-hint">识别文本 · 改完点「确认」</span>
+            <span class="verify-head-title">校验识别结果</span>
             <button type="button" class="verify-btn" id="verify-view" title="切换预览 / 编辑">预览</button>
             <button type="button" class="verify-btn verify-btn-primary" id="verify-save">确认</button>
             <button type="button" class="verify-head-close" id="verify-close" title="关闭" aria-label="关闭">
@@ -310,6 +312,10 @@
             placeholder="这里显示识别出的文字，可直接修改。"
           ></textarea>
           <div class="verify-preview" id="verify-preview" hidden></div>
+          <div class="verify-actions" id="verify-actions">
+            <button type="button" class="verify-btn verify-abandon" id="verify-abandon">放弃</button>
+            <button type="button" class="verify-btn verify-btn-primary" id="verify-save-bottom">保存</button>
+          </div>
           <div class="verify-confirm" id="verify-confirm" hidden>
             <span>有未保存的修改，确定放弃吗？</span>
             <button type="button" class="verify-btn" id="confirm-keep">继续编辑</button>

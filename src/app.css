@@ -3100,3 +3100,212 @@ input,
     min-height: 52px;
   }
 }
+
+
+/* ------------------------------------------------- 校验弹窗：手机宽度（≤480） */
+
+.verify-head-title,
+.verify-expand,
+.verify-actions {
+  display: none;
+}
+
+@media (max-width: 480px) {
+  /* 整个弹窗铺满屏幕 */
+  .verify-overlay {
+    padding: 0;
+  }
+
+  .verify-dialog {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 52px auto minmax(0, 1fr) auto;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    gap: 0;
+    background: var(--app-bg);
+  }
+
+  /* 让头部 / 图片 / 编辑区直接参与外层网格 */
+  .verify-panel {
+    display: contents;
+  }
+
+  .verify-head {
+    grid-row: 1;
+    height: 52px;
+    min-height: 0;
+    padding: 0 8px 0 6px;
+    border-bottom: 1px solid var(--app-border);
+    background: var(--app-top);
+    order: initial;
+  }
+
+  .verify-head-hint {
+    display: none;
+  }
+
+  .verify-head-title {
+    display: inline;
+    flex: 1 1 auto;
+    padding-left: 2px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--app-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .verify-head-close {
+    position: static;
+    order: -1;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
+    border: 0;
+    background: transparent;
+  }
+
+  .verify-head-close svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  #verify-save {
+    display: none;
+  }
+
+  #verify-view {
+    order: 3;
+    height: 34px;
+    padding: 0 12px;
+    flex: 0 0 auto;
+    font-size: 12.5px;
+  }
+
+  /* 图片：顶部参考条 */
+  .verify-stage {
+    grid-row: 2;
+    height: 132px;
+    margin: 10px 12px;
+    padding: 0;
+    border-radius: 12px;
+    background: var(--app-bg);
+  }
+
+  .verify-zoom {
+    top: auto;
+    left: auto;
+    right: 8px;
+    bottom: 8px;
+    border-radius: 15px;
+    padding: 0;
+    opacity: 1;
+    background: var(--app-panel);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+  }
+
+  .verify-zoom-btn {
+    height: 30px;
+    min-width: 30px;
+    font-size: 12.5px;
+  }
+
+  .verify-zoom-value {
+    min-width: 40px;
+    font-size: 12.5px;
+  }
+
+  #zoom-reset {
+    display: none;
+  }
+
+  /* 放大按钮 */
+  .verify-expand {
+    display: inline-flex;
+    align-items: center;
+    position: absolute;
+    left: 8px;
+    bottom: 8px;
+    z-index: 2;
+    height: 30px;
+    padding: 0 10px;
+    border: var(--app-line) solid var(--app-border);
+    border-radius: 15px;
+    background: var(--app-panel);
+    color: var(--app-text);
+    font-family: inherit;
+    font-size: 12px;
+  }
+
+  /* 全屏看图 */
+  .verify-stage.is-full {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    height: auto;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: #0b1220;
+  }
+
+  .verify-stage.is-full .verify-expand {
+    left: 12px;
+    bottom: 16px;
+  }
+
+  .verify-stage.is-full .verify-zoom {
+    right: 12px;
+    bottom: 16px;
+  }
+
+  /* 编辑区 */
+  #verify-editor,
+  .verify-preview {
+    grid-row: 3;
+    margin: 0 12px;
+    padding: 12px;
+    border: var(--app-line) solid var(--app-border);
+    border-radius: 12px;
+    background: var(--app-panel);
+    font-size: 15px;
+  }
+
+  .verify-confirm {
+    grid-row: 3;
+    align-self: end;
+    margin: 0 12px 10px;
+    padding: 10px 12px;
+    border: var(--app-line) solid var(--app-border);
+    border-radius: 12px;
+    background: var(--app-panel);
+  }
+
+  /* 底部操作条 */
+  .verify-actions {
+    display: flex;
+    grid-row: 4;
+    gap: 8px;
+    padding: 10px 12px 14px;
+    border-top: 1px solid var(--app-border);
+    background: var(--app-top);
+  }
+
+  .verify-actions .verify-abandon {
+    height: 46px;
+    padding: 0 18px;
+    font-size: 14px;
+  }
+
+  .verify-actions .verify-btn-primary {
+    flex: 1 1 auto;
+    height: 46px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+}

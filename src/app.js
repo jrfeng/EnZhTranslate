@@ -253,6 +253,9 @@ for (const id of [
   'verify-save',
   'verify-close',
   'verify-view',
+  'verify-expand',
+  'verify-abandon',
+  'verify-save-bottom',
   'verify-preview',
   'confirm-keep',
   'confirm-discard',
@@ -1974,6 +1977,14 @@ function bind() {
   })
   el['verify-save'].addEventListener('click', saveVerify)
   el['verify-close'].addEventListener('click', () => closeVerify())
+  el['verify-abandon'].addEventListener('click', () => closeVerify())
+  el['verify-save-bottom'].addEventListener('click', saveVerify)
+  el['verify-expand'].addEventListener('click', () => {
+    const stage = el['verify-stage']
+    const full = stage.classList.toggle('is-full')
+    el['verify-expand'].textContent = full ? '⤢ 收起' : '⤢ 放大'
+  })
+
   el['verify-view'].addEventListener('click', () => {
     verifyView = verifyView === 'preview' ? 'edit' : 'preview'
     renderVerifyView()
@@ -2551,6 +2562,7 @@ function renderVerifyView() {
 
 /** 打开校验弹窗：整页大小的浮层，上面看图片、下面改文字 */
 function openVerify() {
+  resetVerifyStage()
   if (state.image === null) return
   el['verify-image'].src = state.image.dataUrl
   el['verify-editor'].value = state.input
@@ -2564,6 +2576,15 @@ function openVerify() {
 /** 弹窗里的文字有没有改过 */
 function verifyDirty() {
   return !el['verify-overlay'].hidden && el['verify-editor'].value !== state.input
+}
+
+function resetVerifyStage() {
+  const stage = el['verify-stage']
+  if (stage === null || stage === undefined) return
+  stage.classList.remove('is-full')
+  if (el['verify-expand'] !== null && el['verify-expand'] !== undefined) {
+    el['verify-expand'].textContent = '⤢ 放大'
+  }
 }
 
 function closeVerify(force = false) {
