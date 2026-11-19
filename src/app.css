@@ -2394,8 +2394,8 @@ html[data-theme='d'] .toolbar-tip {
   display: none;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   flex: 0 0 auto;
   padding: 0;
   border: 0;
@@ -2420,13 +2420,18 @@ html[data-theme='d'] .toolbar-tip {
 }
 
 .card-icon-btn svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.5;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+/* 「清除」用的是 48 网格，线宽要按比例放大，否则 18px 下只有 0.56px */
+.card-icon-btn svg[viewBox='0 0 48 48'] {
+  stroke-width: 4;
 }
 
 .card-icon-btn svg text {
