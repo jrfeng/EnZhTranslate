@@ -2389,6 +2389,67 @@ html[data-theme='d'] .toolbar-tip {
   }
 }
 
+/* 卡片标题栏的图标按钮（≤768 生效） */
+.card-icon-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--app-muted);
+  cursor: pointer;
+}
+
+.card-icon-btn:hover {
+  background: var(--app-panel);
+  color: var(--app-text);
+}
+
+.card-icon-btn.on {
+  color: var(--app-accent);
+}
+
+.card-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.card-icon-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.card-icon-btn svg text {
+  stroke: none;
+}
+
+@media (max-width: 768px) {
+  .card-icon-btn {
+    display: inline-flex;
+  }
+
+  .card-meta {
+    gap: 6px;
+  }
+
+  #immediate,
+  #clear,
+  #auto-copy,
+  #view-toggle {
+    display: none;
+  }
+}
+
 @media (max-width: 768px) {
   .terms-trigger {
     display: flex;

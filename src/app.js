@@ -263,6 +263,10 @@ for (const id of [
   'terms-list',
   'auto-copy',
   'immediate',
+  'immediate-icon',
+  'clear-icon',
+  'auto-copy-icon',
+  'view-icon',
   'stale',
   'view-toggle',
   'copy',
@@ -762,6 +766,15 @@ function renderChrome() {  const loading = state.phase === 'loading'
 
   el['immediate'].setAttribute('aria-checked', String(state.immediate))
   el['immediate'].classList.toggle('on', state.immediate)
+  el['immediate-icon'].setAttribute('aria-checked', String(state.immediate))
+  el['immediate-icon'].classList.toggle('on', state.immediate)
+
+  el['auto-copy-icon'].setAttribute('aria-checked', String(state.autoCopy))
+  el['auto-copy-icon'].classList.toggle('on', state.autoCopy)
+
+  el['view-icon'].disabled = state.output.length === 0
+  el['view-icon'].title = state.view === 'preview' ? '切换到 Markdown' : '切换到预览'
+  el['view-icon'].innerHTML = state.view === 'preview' ? VIEW_EYE_ICON : VIEW_CODE_ICON
 
   el.settings.hidden = !state.settingsOpen
   el['settings-toggle'].setAttribute('aria-expanded', String(state.settingsOpen))
@@ -1390,6 +1403,11 @@ function modelStatusFailure(error) {
   return '模型列表读取失败：' + localizeError(error, '请检查 API Key 和接口地址。')
 }
 
+const VIEW_CODE_ICON =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.6 7.2 4.4 12l4.2 4.8" /><path d="M15.4 7.2 19.6 12l-4.2 4.8" /></svg>'
+const VIEW_EYE_ICON =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.6 12S5.8 6.4 12 6.4 21.4 12 21.4 12 18.2 17.6 12 17.6 2.6 12 2.6 12Z" /><circle cx="12" cy="12" r="2.6" /></svg>'
+
 /** 模型列表状态：idle / loading / ok / fail，显示在「接口地址」标签右边 */
 function setModelStatus(kind, text) {
   const box = el['model-status']
@@ -1990,22 +2008,34 @@ function bind() {
 
   el.copy.addEventListener('click', () => void copyText(state.output))
 
-  el['view-toggle'].addEventListener('click', () => {
+  function toggleView() {
     state.view = state.view === 'preview' ? 'source' : 'preview'
     render()
-  })
+  }
 
-  el['auto-copy'].addEventListener('click', () => {
+  el['view-toggle'].addEventListener('click', toggleView)
+  el['view-icon'].addEventListener('click', toggleView)
+
+  function toggleAutoCopy() {
     state.autoCopy = !state.autoCopy
     writeStore(KEYS.autoCopy, state.autoCopy ? '1' : '0')
     renderChrome()
-  })
+  }
 
-  el['immediate'].addEventListener('click', () => {
+  el['auto-copy'].addEventListener('click', toggleAutoCopy)
+  el['auto-copy-icon'].addEventListener('click', toggleAutoCopy)
+
+  function toggleImmediate() {
     state.immediate = !state.immediate
     writeStore(KEYS.immediate, state.immediate ? '1' : '0')
     renderChrome()
-  })
+  }
+
+  el['immediate'].addEventListener('click', toggleImmediate)
+  el['immediate-icon'].addEventListener('click', toggleImmediate)
+
+  // 图标版「清除」和文字版走同一个函数
+  el['clear-icon'].addEventListener('click', () => el['clear'].click())
 
   el['terms-trigger'].addEventListener('click', () => {
     state.termsModalOpen = true
