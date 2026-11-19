@@ -882,11 +882,6 @@ function renderOutput() {
     const text = document.createElement('div')
     text.textContent = state.message
     box.appendChild(text)
-    const retry = document.createElement('wa-button')
-    retry.setAttribute('appearance', 'plain')
-    retry.textContent = '重试'
-    retry.addEventListener('click', () => void run())
-    box.appendChild(retry)
     out.replaceChildren(box)
     return
   }
