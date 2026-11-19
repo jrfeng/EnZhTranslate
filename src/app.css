@@ -1458,7 +1458,9 @@ html[data-theme='c'] .hl-code {
 
 .terms-label {
   font-size: var(--wa-font-size-s);
-  font-weight: 700;
+  font-weight: 600;
+  /* 用透明度压淡，四套主题下都不用单独调色 */
+  opacity: 0.72;
 }
 
 .terms-go {
