@@ -2001,7 +2001,8 @@ function bind() {
   /* 图片区域：滚轮缩放 + 拖拽平移（缩放控件与关闭按钮上的操作不参与） */
   const stage = el['verify-stage']
   const isStageControl = (target) =>
-    target instanceof Element && target.closest('.verify-zoom, .verify-head-close') !== null
+    target instanceof Element &&
+    target.closest('.verify-zoom, .verify-head-close, .verify-expand') !== null
 
   stage.addEventListener(
     'wheel',
