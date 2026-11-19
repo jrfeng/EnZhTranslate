@@ -211,7 +211,6 @@ for (const id of [
   'theme-modal',
   'theme-modal-list',
   'theme-modal-x',
-  'theme-modal-cancel',
   'theme-modal-done',
   'balance-modal',
   'balance-modal-x',
@@ -2241,14 +2240,8 @@ function bind() {
     state.themePickerOpen = false
     renderChrome()
   })
-  el['theme-modal-cancel'].addEventListener('click', () => {
-    state.themePickerOpen = false
-    renderChrome()
-  })
   el['theme-modal-done'].addEventListener('click', () => {
     state.themePickerOpen = false
-    applyTheme(state.pendingTheme)
-    writeStore(KEYS.theme, state.theme)
     renderChrome()
   })
 
@@ -3002,7 +2995,10 @@ function renderPickerLists() {
     label.textContent = item.name
     row.append(tick, label)
     row.addEventListener('click', () => {
+      // 主题点一下就生效，弹窗留着让用户继续比较
       state.pendingTheme = item.id
+      applyTheme(item.id)
+      writeStore(KEYS.theme, state.theme)
       renderChrome()
     })
     themeList.appendChild(row)
