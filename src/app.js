@@ -788,6 +788,7 @@ function renderChrome() {  const loading = state.phase === 'loading'
   el['auto-copy-icon'].dataset.tip = state.autoCopy ? '自动复制：开' : '自动复制：关'
   el['view-icon'].dataset.tip = el['view-icon'].title
   el['image-zoom-icon'].dataset.tip = '校验识别结果'
+  el['image-refresh'].dataset.tip = '重新识别'
 
   el.settings.hidden = !state.settingsOpen
   el['settings-toggle'].setAttribute('aria-expanded', String(state.settingsOpen))
@@ -2221,6 +2222,7 @@ function bind() {
     el['clear-icon'],
     el['auto-copy-icon'],
     el['view-icon'],
+    el['image-refresh'],
     el['image-zoom-icon'],
   ]
 
