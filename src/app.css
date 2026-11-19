@@ -1409,47 +1409,46 @@ html[data-theme='c'] .hl-code {
   flex: 1 1 auto;
 }
 
-/* 窄窗口的术语入口（≤768）：面板变成弹层，入口是这个按钮 */
+/* 窄窗口的术语入口（≤768）：和普通描边按钮同一套视觉 */
 .terms-trigger {
   display: none;
   align-items: center;
   gap: 10px;
   flex: 0 0 auto;
-  height: 44px;
+  height: 42px;
   padding: 0 12px;
-  border: 0;
+  border: var(--app-line) solid var(--app-border);
   border-radius: var(--app-radius-sm);
-  background: color-mix(in srgb, var(--app-accent) 12%, var(--app-panel));
-  color: var(--app-accent);
+  background: var(--app-panel);
+  color: var(--app-text);
   font-family: inherit;
   text-align: left;
   cursor: pointer;
 }
 
-@supports not (background: color-mix(in srgb, red 10%, white)) {
-  .terms-trigger {
-    background: var(--app-panel-2);
-  }
+.terms-trigger:hover {
+  background: var(--app-panel-2);
 }
 
-.terms-trigger:hover {
-  background: color-mix(in srgb, var(--app-accent) 20%, var(--app-panel));
+.terms-trigger:active {
+  background: var(--app-panel-2);
 }
 
 .terms-badge {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--app-accent) 18%, transparent);
+  border-radius: calc(var(--app-radius-sm) / 2);
+  background: var(--app-panel-2);
+  color: var(--app-muted);
 }
 
 .terms-badge svg {
-  width: 15px;
-  height: 15px;
+  width: 14px;
+  height: 14px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.7;
@@ -1466,7 +1465,13 @@ html[data-theme='c'] .hl-code {
   margin-left: auto;
   font-size: var(--wa-font-size-xs);
   font-weight: 400;
-  opacity: 0.8;
+  color: var(--app-muted);
+}
+
+/* 像素风主题：方角 + 硬阴影，和面板一致 */
+html[data-theme='c'] .terms-trigger,
+html[data-theme='d'] .terms-trigger {
+  box-shadow: var(--app-shadow);
 }
 
 .terms-body {
