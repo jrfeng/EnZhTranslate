@@ -1349,15 +1349,23 @@ async function refreshModels() {
           : '接口没有返回模型列表，将使用默认模型',
       )
     } else {
-      setModelStatus(
-        'fail',
-        '模型列表读取失败：' + localizeError(payload?.error, '请检查 API Key 和接口地址。'),
-      )
+      setModelStatus('fail', modelStatusFailure(payload?.error))
     }
   } catch (error) {
     setModelStatus('fail', '模型列表读取失败：请检查网络后重试。')
   }
   renderModels()
+}
+
+/**
+ * 模型列表失败的文案。
+ * 这里就是「设置」弹窗，所以 Key 无效时不再重复提示「请在『设置』里检查」；
+ * 翻译过程的 Toast 仍然走 localizeError，保留那句指引。
+ */
+function modelStatusFailure(error) {
+  const code = String(error?.code ?? '')
+  if (code === 'UNAUTHORIZED' || code === 'NO_KEY') return '模型列表读取失败：API Key 无效'
+  return '模型列表读取失败：' + localizeError(error, '请检查 API Key 和接口地址。')
 }
 
 /** 模型列表状态：idle / loading / ok / fail，显示在「接口地址」标签右边 */
