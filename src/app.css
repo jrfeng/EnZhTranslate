@@ -1364,6 +1364,51 @@ html[data-theme='c'] .hl-code {
 
 /* ---------------------------------------------------------------- 术语 */
 
+/* 术语弹窗（窄窗口专用） */
+.terms-modal {
+  width: 520px;
+}
+
+.modal-count {
+  font-size: var(--wa-font-size-xs);
+  color: var(--app-muted);
+  font-weight: 400;
+}
+
+.terms-modal-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.terms-modal .terms-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 16px 10px;
+}
+
+.terms-modal .terms-add .term-field {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.terms-modal .terms-list {
+  padding: 0 10px 8px;
+}
+
+.terms-modal-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.terms-foot-gap {
+  flex: 1 1 auto;
+}
+
 /* 窄窗口的术语入口（≤768）：面板变成弹层，入口是这个按钮 */
 .terms-trigger {
   display: none;
@@ -1422,14 +1467,6 @@ html[data-theme='c'] .hl-code {
   font-size: var(--wa-font-size-xs);
   font-weight: 400;
   opacity: 0.8;
-}
-
-.terms-backdrop {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 2999;
-  background: rgba(15, 23, 42, 0.38);
 }
 
 .terms-body {
@@ -2348,32 +2385,9 @@ html[data-theme='d'] .toolbar-tip {
     display: flex;
   }
 
-  /* 面板默认隐藏，点按钮后变成居中弹层 */
+  /* 窄窗口下不再用内嵌面板，改由按钮打开专用弹窗 */
   .card.terms {
     display: none;
-  }
-
-  .card.terms.is-open {
-    display: flex;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 3000;
-    width: min(520px, calc(100vw - 32px));
-    max-height: calc(100vh - 96px);
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
-  }
-
-  .card.terms.is-open .terms-body {
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    overflow: auto;
-  }
-
-  .terms-backdrop:not([hidden]) {
-    display: block;
   }
 }
 

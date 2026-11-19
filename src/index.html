@@ -115,6 +115,26 @@
             </div>
           </div>
         </div>
+  <div class="modal-overlay" id="terms-modal" hidden>
+    <div class="modal terms-modal" role="dialog" aria-modal="true" aria-label="术语">
+      <div class="modal-head">
+        <span class="modal-title">术语</span>
+        <span class="modal-count" id="terms-modal-count">0 条</span>
+        <button type="button" class="modal-close" id="terms-x" title="关闭" aria-label="关闭">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+            <path d="M3 3l6 6M9 3l-6 6" />
+          </svg>
+        </button>
+      </div>
+      <div class="terms-modal-body" id="terms-modal-body"></div>
+      <div class="modal-foot terms-modal-foot">
+        <wa-button id="terms-clear-modal" variant="warning" appearance="plain" size="s" disabled>清空全部</wa-button>
+        <span class="terms-foot-gap"></span>
+        <wa-button id="terms-done" variant="brand" size="s">完成</wa-button>
+      </div>
+    </div>
+  </div>
+
 
         <main class="grid">
           <section class="col">
@@ -179,7 +199,6 @@
               <span class="terms-label" id="terms-label">术语 0 条</span>
               <span class="terms-go">管理 ›</span>
             </button>
-            <div class="terms-backdrop" id="terms-backdrop" hidden></div>
             <section class="card terms" id="terms-card">
               <div class="card-head">
                 <span class="card-title">术语</span>

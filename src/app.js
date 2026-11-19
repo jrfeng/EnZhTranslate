@@ -249,7 +249,12 @@ for (const id of [
   'terms-toggle',
   'terms-trigger',
   'terms-label',
-  'terms-backdrop',
+  'terms-modal',
+  'terms-modal-body',
+  'terms-modal-count',
+  'terms-x',
+  'terms-done',
+  'terms-clear-modal',
   'terms-card',
   'terms-body',
   'term-source',
@@ -763,11 +768,17 @@ function renderChrome() {  const loading = state.phase === 'loading'
 
   const narrow = window.matchMedia('(max-width: 768px)').matches
   el['terms-label'].textContent = '术语 ' + state.terms.length + ' 条'
-  el['terms-toggle'].textContent = narrow ? '关闭' : state.termsOpen ? '收起' : '展开'
-  el['terms-body'].hidden = narrow ? !state.termsModalOpen : !state.termsOpen
-  el['terms-card'].classList.toggle('is-open', narrow && state.termsModalOpen)
-  el['terms-backdrop'].hidden = !(narrow && state.termsModalOpen)
+  el['terms-toggle'].textContent = state.termsOpen ? '收起' : '展开'
   el['term-count'].textContent = String(state.terms.length)
+  el['terms-modal-count'].textContent = state.terms.length + ' 条'
+  el['terms-modal'].hidden = !(narrow && state.termsModalOpen)
+  el['terms-body'].hidden = narrow ? false : !state.termsOpen
+
+  // 同一套输入框/列表，按宽度挂到面板或弹窗里
+  const host = narrow ? el['terms-modal-body'] : el['terms-card']
+  if (el['terms-body'].parentElement !== host) host.appendChild(el['terms-body'])
+
+  el['terms-clear-modal'].disabled = state.terms.length === 0
   el['term-clear'].disabled = state.terms.length === 0
   el['term-add'].disabled = !(
     state.termSource.trim().length > 0 &&
@@ -2003,17 +2014,28 @@ function bind() {
   })
 
   el['terms-toggle'].addEventListener('click', () => {
-    if (window.matchMedia('(max-width: 768px)').matches) {
-      state.termsModalOpen = false
-      renderChrome()
-      return
-    }
     state.termsOpen = !state.termsOpen
     writeStore(KEYS.termsOpen, state.termsOpen ? '1' : '0')
     renderChrome()
   })
 
-  el['terms-backdrop'].addEventListener('mousedown', () => {
+  el['terms-x'].addEventListener('click', () => {
+    state.termsModalOpen = false
+    renderChrome()
+  })
+
+  el['terms-done'].addEventListener('click', () => {
+    state.termsModalOpen = false
+    renderChrome()
+  })
+
+  el['terms-modal'].addEventListener('mousedown', (event) => {
+    if (event.target !== el['terms-modal']) return
+    state.termsModalOpen = false
+    renderChrome()
+  })
+
+  el['terms-clear-modal'].addEventListener('click', () => {
     state.termsModalOpen = false
     renderChrome()
   })
