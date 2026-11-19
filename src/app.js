@@ -2583,7 +2583,10 @@ function openIconMenu(kind) {
     row.setAttribute('role', 'menuitem')
     const tick = document.createElement('span')
     tick.className = 'tick'
-    tick.textContent = item.id === current ? '✓' : ''
+    if (item.id === current) {
+      tick.innerHTML =
+        '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.4 4.8 9 10 3.2" /></svg>'
+    }
     const label = document.createElement('span')
     label.textContent = item.label
     row.append(tick, label)

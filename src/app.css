@@ -2193,13 +2193,52 @@ html[data-theme='d'] .icon-menu {
 }
 
 .icon-menu-item .tick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 12px;
+  height: 12px;
   flex: 0 0 auto;
   color: var(--app-accent);
 }
 
+.icon-menu-item .tick svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 风格化 / 像素主题：线条更硬，勾更粗 */
+html[data-theme='c'] .icon-menu-item .tick svg,
+html[data-theme='d'] .icon-menu-item .tick svg {
+  stroke-width: 2.2;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+}
+
+html[data-theme='c'] .icon-btn svg,
+html[data-theme='d'] .icon-btn svg {
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+}
+
+html[data-theme='c'] .icon-btn svg {
+  stroke-width: 1.9;
+}
+
+html[data-theme='d'] .icon-btn svg {
+  stroke-width: 1.7;
+}
+
+/* 当前项：底色 + 强调色文字，跟主题走 */
 .icon-menu-item.is-current {
   background: var(--app-panel-2);
+  color: var(--app-accent);
 }
 
 /* 悬停提示：200ms 后出现 */
