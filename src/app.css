@@ -2410,8 +2410,23 @@ html[data-theme='d'] .toolbar-tip {
   color: var(--app-text);
 }
 
+/* 开启态与宽屏开关一致：强调色填充 + 反白图标 */
 .card-icon-btn.on {
-  color: var(--app-accent);
+  background: var(--app-accent);
+  color: var(--app-accent-on);
+}
+
+.card-icon-btn.on:hover {
+  background: var(--app-accent);
+  color: var(--app-accent-on);
+}
+
+html[data-theme='c'] .card-icon-btn.on {
+  box-shadow: 2px 2px 0 #101010;
+}
+
+html[data-theme='d'] .card-icon-btn.on {
+  box-shadow: 2px 2px 0 #1b2a4a;
 }
 
 .card-icon-btn:disabled {
