@@ -2361,9 +2361,31 @@ html[data-theme='d'] .more-menu {
 }
 
 .picker-item .tick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 12px;
+  height: 12px;
   flex: 0 0 auto;
   color: var(--app-accent);
+}
+
+.picker-item .tick svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+html[data-theme='c'] .picker-item .tick svg,
+html[data-theme='d'] .picker-item .tick svg {
+  stroke-width: 2.2;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
 }
 
 /* ------------------------------------------------- 余额弹窗 */
