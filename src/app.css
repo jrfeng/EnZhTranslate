@@ -3372,3 +3372,33 @@ input,
     background: var(--app-border);
   }
 }
+
+
+/* 术语弹窗底部：手机上「清空全部」在左、「添加」在右 */
+#term-add-foot {
+  display: none;
+}
+
+@media (max-width: 480px) {
+  /* 输入条里的 + 让位给底部「添加」 */
+  .term-add-icon {
+    display: none;
+  }
+
+  .terms-modal-foot {
+    gap: 8px;
+  }
+
+  .terms-modal-foot .terms-foot-gap {
+    display: none;
+  }
+
+  #term-add-foot {
+    display: inline-flex;
+    margin-left: auto;
+  }
+
+  #terms-done {
+    display: none;
+  }
+}

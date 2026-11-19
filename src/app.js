@@ -294,6 +294,7 @@ for (const id of [
   'term-target',
   'term-add',
   'term-add-icon',
+  'term-add-foot',
   'terms-list',
   'auto-copy',
   'immediate',
@@ -855,6 +856,7 @@ function renderChrome() {  const loading = state.phase === 'loading'
     state.terms.length < MAX_TERMS
   )
   el['term-add-icon'].disabled = el['term-add'].disabled
+  el['term-add-foot'].disabled = el['term-add'].disabled
 }
 
 /* ---------------------------------------------------------------- 用量 */
@@ -2367,6 +2369,7 @@ function bind() {
   }
   el['term-add'].addEventListener('click', addTerm)
   el['term-add-icon'].addEventListener('click', addTerm)
+  el['term-add-foot'].addEventListener('click', addTerm)
 
   el['settings-toggle'].addEventListener('click', () => {
     state.settingsOpen = !state.settingsOpen
