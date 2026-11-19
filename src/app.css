@@ -1227,6 +1227,13 @@ wa-input.is-secret::part(input) {
   border: 1px solid var(--app-border);
   border-radius: 4px;
   background: var(--app-panel);
+  /* 和旁边的校验图标同色，否则同样线宽看起来更重 */
+  color: var(--app-muted);
+}
+
+.image-refresh-btn::part(button):hover {
+  color: var(--app-text);
+  background: var(--app-panel-2);
 }
 
 .image-strip-icon {
