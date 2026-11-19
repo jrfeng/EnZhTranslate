@@ -157,6 +157,8 @@ const state = {
   selectedModel: DEFAULT_MODEL,
   models: [],
   settingsOpen: false,
+  /** 窄窗口下展开的图标菜单：null / 'model' / 'theme' */
+  openIconMenu: null,
   /** 当前主题 id：auto / a / b / c */
   theme: 'auto',
   /** 图片识别状态 */
@@ -192,6 +194,10 @@ for (const id of [
   'balance-progress',
   'balance-divider',
   'theme-select',
+  'model-icon-btn',
+  'model-menu',
+  'theme-icon-btn',
+  'theme-menu',
   'source-lang',
   'target-lang',
   'pick-image',
@@ -738,6 +744,7 @@ function renderChrome() {  const loading = state.phase === 'loading'
 
   el['view-toggle'].disabled = state.output.length === 0
   el['view-toggle'].textContent = state.view === 'preview' ? 'Markdown' : '预览'
+  syncIconButtons()
 
   el['auto-copy'].setAttribute('aria-checked', String(state.autoCopy))
   el['auto-copy'].classList.toggle('on', state.autoCopy)
@@ -1690,7 +1697,9 @@ function renderSizeBadge() {
 function initSizeBadge() {
   if (__FISH_DEBUG__ !== true) return
 
-  const enabled = readStore('fish-app.debug-size') === '1'
+  // debug 构建默认就显示，按 Ctrl+Shift+D 可以关掉
+  const stored = readStore('fish-app.debug-size')
+  const enabled = stored === null ? true : stored === '1'
 
   const badge = document.createElement('div')
   badge.id = 'size-badge'
@@ -2074,6 +2083,38 @@ function bind() {
   })
 
   bindWindowControls()
+
+  el['model-icon-btn'].addEventListener('click', (event) => {
+    event.stopPropagation()
+    toggleIconMenu('model')
+  })
+
+  el['theme-icon-btn'].addEventListener('click', (event) => {
+    event.stopPropagation()
+    toggleIconMenu('theme')
+  })
+
+  for (const button of [el['model-icon-btn'], el['theme-icon-btn']]) {
+    button.addEventListener('mouseenter', () => showToolbarTip(button))
+    button.addEventListener('mouseleave', hideToolbarTip)
+    button.addEventListener('blur', hideToolbarTip)
+  }
+
+  document.addEventListener('click', (event) => {
+    if (state.openIconMenu === null) return
+    const menu = el[state.openIconMenu + '-menu']
+    if (menu.contains(event.target)) return
+    closeIconMenu()
+  })
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeIconMenu()
+  })
+
+  window.addEventListener('resize', () => {
+    hideToolbarTip()
+    closeIconMenu()
+  })
 
   el['model-select'].addEventListener('change', () => {
     state.selectedModel = el['model-select'].value
@@ -2464,6 +2505,152 @@ function renderThemeSelect() {
   }
   select.value = state.theme
   ensureSelectChevron(select)
+}
+
+/* ------------------------------------------------- 窄窗口图标按钮（模型 / 主题） */
+
+const THEME_ICONS = {
+  // 跟随系统：半填充圆
+  auto: '<circle cx="8" cy="8" r="5.6" /><path class="icon-fill" d="M8 2.4a5.6 5.6 0 0 1 0 11.2z" />',
+  // 浅色：空心圆 + 光线
+  b: '<circle cx="8" cy="8" r="3.4" /><path d="M8 1.2v1.6M8 13.2v1.6M1.2 8h1.6M13.2 8h1.6M3.2 3.2l1.1 1.1M11.7 11.7l1.1 1.1M12.8 3.2l-1.1 1.1M4.3 11.7l-1.1 1.1" />',
+  // 深色：实心圆（月相）
+  a: '<circle cx="8" cy="8" r="5.4" class="icon-fill" />',
+  // 风格化：半填充 + 直角
+  c: '<rect x="2.6" y="2.6" width="10.8" height="10.8" /><path class="icon-fill" d="M13.4 2.6v10.8H2.6z" />',
+  // 蓝色大肥鱼：半填充 + 圆
+  d: '<circle cx="8" cy="8" r="5.6" /><path class="icon-fill" d="M8 2.4a5.6 5.6 0 0 1 0 11.2z" />',
+}
+
+let toolbarTipTimer = 0
+let toolbarTipEl = null
+
+function currentThemeIcon() {
+  const id = state.theme === 'auto' ? 'auto' : state.theme
+  return THEME_ICONS[id] || THEME_ICONS.auto
+}
+
+function syncIconButtons() {
+  const themeButton = el['theme-icon-btn']
+  if (themeButton !== null && themeButton !== undefined) {
+    const svg = themeButton.querySelector('svg')
+    if (svg !== null) svg.innerHTML = currentThemeIcon()
+    themeButton.dataset.tip = '主题：' + themeName(state.theme)
+  }
+  const modelButton = el['model-icon-btn']
+  if (modelButton !== null && modelButton !== undefined) {
+    modelButton.dataset.tip = '模型：' + (state.selectedModel || config.model || DEFAULT_MODEL)
+  }
+}
+
+function themeName(id) {
+  const found = THEMES.find((item) => item.id === id)
+  return found === undefined ? '跟随系统' : found.name
+}
+
+function modelMenuItems() {
+  const list = state.models.length > 0 ? state.models : [{ id: config.model || DEFAULT_MODEL }]
+  return list.map((item) => ({ id: item.id, label: item.id }))
+}
+
+function themeMenuItems() {
+  return THEMES.map((item) => ({ id: item.id, label: item.name }))
+}
+
+function closeIconMenu() {
+  if (state.openIconMenu === null) return
+  state.openIconMenu = null
+  el['model-menu'].hidden = true
+  el['theme-menu'].hidden = true
+  el['model-icon-btn'].classList.remove('is-open')
+  el['theme-icon-btn'].classList.remove('is-open')
+  el['model-icon-btn'].setAttribute('aria-expanded', 'false')
+  el['theme-icon-btn'].setAttribute('aria-expanded', 'false')
+}
+
+function openIconMenu(kind) {
+  closeIconMenu()
+  state.openIconMenu = kind
+  const menu = el[kind + '-menu']
+  const button = el[kind + '-icon-btn']
+  const items = kind === 'model' ? modelMenuItems() : themeMenuItems()
+  const current = kind === 'model' ? state.selectedModel || config.model : state.theme
+
+  menu.replaceChildren()
+  for (const item of items) {
+    const row = document.createElement('div')
+    row.className = 'icon-menu-item' + (item.id === current ? ' is-current' : '')
+    row.setAttribute('role', 'menuitem')
+    const tick = document.createElement('span')
+    tick.className = 'tick'
+    tick.textContent = item.id === current ? '✓' : ''
+    const label = document.createElement('span')
+    label.textContent = item.label
+    row.append(tick, label)
+    row.addEventListener('click', () => {
+      closeIconMenu()
+      if (kind === 'model') {
+        state.selectedModel = item.id
+        config.model = item.id
+        saveSettings()
+        // 宽屏用的是下拉框，切窄窗口后它仍然存在，必须一起同步
+        renderModels()
+        renderChrome()
+      } else {
+        applyTheme(item.id)
+        writeStore(KEYS.theme, state.theme)
+        renderChrome()
+      }
+    })
+    menu.appendChild(row)
+  }
+
+  menu.hidden = false
+  menu.classList.remove('is-right')
+  button.classList.add('is-open')
+  button.setAttribute('aria-expanded', 'true')
+
+  // 靠近窗口右边时改成右对齐，避免菜单出界
+  const rect = menu.getBoundingClientRect()
+  if (rect.right > window.innerWidth - 8) menu.classList.add('is-right')
+}
+
+function toggleIconMenu(kind) {
+  if (state.openIconMenu === kind) {
+    closeIconMenu()
+  } else {
+    openIconMenu(kind)
+  }
+}
+
+function showToolbarTip(button) {
+  const text = button.dataset.tip
+  if (typeof text !== 'string' || text.length === 0) return
+  hideToolbarTip()
+  toolbarTipTimer = window.setTimeout(() => {
+    toolbarTipTimer = 0
+    if (toolbarTipEl === null) {
+      toolbarTipEl = document.createElement('div')
+      toolbarTipEl.className = 'toolbar-tip'
+      document.body.appendChild(toolbarTipEl)
+    }
+    const rect = button.getBoundingClientRect()
+    toolbarTipEl.textContent = text
+    toolbarTipEl.hidden = false
+    const tipRect = toolbarTipEl.getBoundingClientRect()
+    const left = Math.round(rect.left + rect.width / 2 - tipRect.width / 2)
+    const top = Math.round(rect.top - tipRect.height - 8)
+    toolbarTipEl.style.left = Math.max(6, left) + 'px'
+    toolbarTipEl.style.top = Math.max(6, top) + 'px'
+  }, 200)
+}
+
+function hideToolbarTip() {
+  if (toolbarTipTimer !== 0) {
+    window.clearTimeout(toolbarTipTimer)
+    toolbarTipTimer = 0
+  }
+  if (toolbarTipEl !== null) toolbarTipEl.hidden = true
 }
 
 /** 原文 / 译文语言下拉 */

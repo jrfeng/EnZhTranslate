@@ -41,10 +41,22 @@
           <div class="head-model">
             <span class="field-label">模型</span>
             <wa-select id="model-select" size="s" appearance="outlined" class="model-select" title="选择翻译使用的模型"></wa-select>
+            <button type="button" class="icon-btn" id="model-icon-btn" aria-haspopup="true" aria-expanded="false" aria-label="选择模型">
+              <svg viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M8 2 14 5.2 8 8.4 2 5.2z" />
+                <path d="M2 8.2 8 11.4 14 8.2" />
+                <path d="M2 11.2 8 14.4 14 11.2" />
+              </svg>
+            </button>
+            <div class="icon-menu" id="model-menu" role="menu" hidden></div>
           </div>
           <div class="head-tools">
             <span class="field-label">主题</span>
             <wa-select id="theme-select" size="s" appearance="outlined" class="theme-select" title="切换界面主题"></wa-select>
+            <button type="button" class="icon-btn" id="theme-icon-btn" aria-haspopup="true" aria-expanded="false" aria-label="切换界面主题">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.6" /></svg>
+            </button>
+            <div class="icon-menu" id="theme-menu" role="menu" hidden></div>
             <span class="settings-wrap">
               <wa-button id="settings-toggle" appearance="plain" size="s">设置</wa-button>
               <span class="status-dot" id="settings-dot" hidden aria-hidden="true"></span>
