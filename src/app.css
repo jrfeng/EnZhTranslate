@@ -1237,7 +1237,7 @@ wa-input.is-secret::part(input) {
 }
 
 .image-strip-icon {
-  display: none;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 30px;
@@ -1249,6 +1249,11 @@ wa-input.is-secret::part(input) {
   background: var(--app-panel);
   color: var(--app-muted);
   cursor: pointer;
+}
+
+/* 文字版「校验」已被图标取代 */
+#image-zoom {
+  display: none;
 }
 
 .image-strip-icon:hover {
@@ -2564,14 +2569,6 @@ html[data-theme='d'] .card-icon-btn.on {
     display: flex;
   }
 
-  /* 图片条：校验改成图标 */
-  .image-strip-icon {
-    display: inline-flex;
-  }
-
-  #image-zoom {
-    display: none;
-  }
 
   /* 校验弹窗：图片在上、编辑区在下 */
   .verify-dialog {
