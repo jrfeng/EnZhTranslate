@@ -2430,8 +2430,10 @@ html[data-theme='d'] .card-icon-btn.on {
 }
 
 .card-icon-btn:disabled {
-  opacity: 0.4;
+  opacity: 0.32;
+  color: var(--app-muted);
   cursor: default;
+  pointer-events: none;
 }
 
 .card-icon-btn svg {
