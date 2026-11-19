@@ -777,6 +777,12 @@ function renderChrome() {  const loading = state.phase === 'loading'
   el['view-icon'].title = state.view === 'preview' ? '切换到 Markdown' : '切换到预览'
   el['view-icon'].innerHTML = state.view === 'preview' ? VIEW_EYE_ICON : VIEW_CODE_ICON
 
+  // 卡片图标按钮的 hover 提示
+  el['immediate-icon'].dataset.tip = state.immediate ? '粘贴后翻译：开' : '粘贴后翻译：关'
+  el['clear-icon'].dataset.tip = '清除'
+  el['auto-copy-icon'].dataset.tip = state.autoCopy ? '自动复制：开' : '自动复制：关'
+  el['view-icon'].dataset.tip = el['view-icon'].title
+
   el.settings.hidden = !state.settingsOpen
   el['settings-toggle'].setAttribute('aria-expanded', String(state.settingsOpen))
 
@@ -2193,10 +2199,21 @@ function bind() {
     toggleIconMenu('theme')
   })
 
-  for (const button of [el['model-icon-btn'], el['theme-icon-btn'], el['settings-icon-btn']]) {
+  const tipButtons = [
+    el['model-icon-btn'],
+    el['theme-icon-btn'],
+    el['settings-icon-btn'],
+    el['immediate-icon'],
+    el['clear-icon'],
+    el['auto-copy-icon'],
+    el['view-icon'],
+  ]
+
+  for (const button of tipButtons) {
     button.addEventListener('mouseenter', () => showToolbarTip(button))
     button.addEventListener('mouseleave', hideToolbarTip)
     button.addEventListener('blur', hideToolbarTip)
+    button.addEventListener('click', hideToolbarTip)
   }
 
   document.addEventListener('click', (event) => {
