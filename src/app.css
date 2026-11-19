@@ -2465,6 +2465,11 @@ html[data-theme='d'] .card-icon-btn.on {
   stroke-width: 1.1;
 }
 
+/* 术语图标同样用细线 */
+.card-icon-btn#terms-icon svg {
+  stroke-width: 1.1;
+}
+
 .card-icon-btn svg text {
   stroke: none;
 }
