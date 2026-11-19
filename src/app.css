@@ -2924,15 +2924,20 @@ input,
 }
 
 @media (max-width: 480px) {
-  /* 工具栏：语言对一行、余额 + 更多一行 */
+  /* 工具栏：压成单行，余额收进「更多」菜单 */
   .head {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 6px;
+    padding: 6px 8px 6px 10px;
   }
 
   .lang-pair {
-    width: 100%;
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    gap: 4px;
   }
 
   .lang-pair .field-label {
@@ -2946,28 +2951,19 @@ input,
   }
 
   .head-tools {
-    width: 100%;
+    width: auto;
+    flex: 0 0 auto;
   }
 
-  /* 第二行：余额贴左，「更多」贴右 */
+  /* 余额只在菜单里出现，工具栏不占位 */
   #balance-wrap {
-    order: 1;
-    margin-right: auto;
-  }
-
-  #more-btn {
-    order: 2;
-    margin-left: auto;
-  }
-
-  /* 640 时藏起来的余额，手机上要在第二行露出来 */
-  #balance-wrap {
-    display: inline-flex;
+    display: none;
   }
 
   #more-btn {
     width: 44px;
     height: 44px;
+    flex: 0 0 auto;
   }
 
   /* 卡片：触控尺寸 + 字号 */
