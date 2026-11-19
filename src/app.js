@@ -159,6 +159,14 @@ const state = {
   settingsOpen: false,
   /** 窄窗口下术语面板是否以弹层形式打开 */
   termsModalOpen: false,
+  /** 640 以下的「更多」菜单 */
+  moreMenuOpen: false,
+  modelPickerOpen: false,
+  themePickerOpen: false,
+  balanceOpen: false,
+  /** 弹窗里选中、但还没点「完成」的临时值 */
+  pendingModel: '',
+  pendingTheme: '',
   /** 窄窗口下展开的图标菜单：null / 'model' / 'theme' */
   openIconMenu: null,
   /** 当前主题 id：auto / a / b / c */
@@ -189,6 +197,23 @@ const el = {}
 for (const id of [
   'settings-toggle',
   'settings-icon-btn',
+  'more-btn',
+  'more-menu',
+  'model-modal',
+  'model-modal-list',
+  'model-modal-x',
+  'model-modal-cancel',
+  'model-modal-done',
+  'theme-modal',
+  'theme-modal-list',
+  'theme-modal-x',
+  'theme-modal-cancel',
+  'theme-modal-done',
+  'balance-modal',
+  'balance-modal-x',
+  'balance-modal-refresh',
+  'balance-modal-ok',
+  'balance-amount',
   'settings-x',
   'settings',
   'balance',
@@ -764,6 +789,7 @@ function renderChrome() {  const loading = state.phase === 'loading'
   el['view-toggle'].disabled = state.output.length === 0
   el['view-toggle'].textContent = state.view === 'preview' ? 'Markdown' : '预览'
   syncIconButtons()
+  syncMoreUi()
 
   el['auto-copy'].setAttribute('aria-checked', String(state.autoCopy))
   el['auto-copy'].classList.toggle('on', state.autoCopy)
@@ -2088,6 +2114,86 @@ function bind() {
     el['term-source'].focus()
   })
 
+  el['more-btn'].addEventListener('click', (event) => {
+    event.stopPropagation()
+    if (state.moreMenuOpen) closeMoreMenu()
+    else openMoreMenu()
+  })
+
+  // 点外部关闭「更多」菜单
+  document.addEventListener('mousedown', (event) => {
+    if (!state.moreMenuOpen) return
+    if (el['more-menu'].contains(event.target)) return
+    if (el['more-btn'].contains(event.target)) return
+    closeMoreMenu()
+  })
+
+  // Esc：先关菜单，再关各弹窗
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return
+    if (state.moreMenuOpen) {
+      closeMoreMenu()
+      return
+    }
+    if (!state.modelPickerOpen && !state.themePickerOpen && !state.balanceOpen) return
+    state.modelPickerOpen = false
+    state.themePickerOpen = false
+    state.balanceOpen = false
+    renderChrome()
+  })
+
+  el['model-modal-x'].addEventListener('click', () => {
+    state.modelPickerOpen = false
+    renderChrome()
+  })
+  el['model-modal-cancel'].addEventListener('click', () => {
+    state.modelPickerOpen = false
+    renderChrome()
+  })
+  el['model-modal-done'].addEventListener('click', () => {
+    state.modelPickerOpen = false
+    state.selectedModel = state.pendingModel
+    config.model = state.pendingModel
+    saveSettings()
+    renderModels()
+    renderChrome()
+  })
+
+  el['theme-modal-x'].addEventListener('click', () => {
+    state.themePickerOpen = false
+    renderChrome()
+  })
+  el['theme-modal-cancel'].addEventListener('click', () => {
+    state.themePickerOpen = false
+    renderChrome()
+  })
+  el['theme-modal-done'].addEventListener('click', () => {
+    state.themePickerOpen = false
+    applyTheme(state.pendingTheme)
+    writeStore(KEYS.theme, state.theme)
+    renderChrome()
+  })
+
+  el['balance-modal-x'].addEventListener('click', () => {
+    state.balanceOpen = false
+    renderChrome()
+  })
+  el['balance-modal-ok'].addEventListener('click', () => {
+    state.balanceOpen = false
+    renderChrome()
+  })
+  el['balance-modal-refresh'].addEventListener('click', () => void refreshBalance(true))
+
+  for (const id of ['model-modal', 'theme-modal', 'balance-modal']) {
+    el[id].addEventListener('mousedown', (event) => {
+      if (event.target !== el[id]) return
+      if (id === 'model-modal') state.modelPickerOpen = false
+      else if (id === 'theme-modal') state.themePickerOpen = false
+      else state.balanceOpen = false
+      renderChrome()
+    })
+  }
+
   el['terms-icon'].addEventListener('click', () => {
     state.termsModalOpen = true
     renderChrome()
@@ -2688,6 +2794,151 @@ const THEME_ICONS = {
   c: '<rect x="2.6" y="2.6" width="10.8" height="10.8" /><path class="icon-fill" d="M13.4 2.6v10.8H2.6z" />',
   // 蓝色大肥鱼：半填充 + 圆
   d: '<circle cx="8" cy="8" r="5.6" /><path class="icon-fill" d="M8 2.4a5.6 5.6 0 0 1 0 11.2z" />',
+}
+
+/* ------------------------------------------------- 640 以下的「更多」菜单 */
+
+const MORE_ICONS = {
+  model:
+    '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2 14 5.2 8 8.4 2 5.2z" /><path d="M2 8.2 8 11.4 14 8.2" /><path d="M2 11.2 8 14.4 14 11.2" /></svg>',
+  theme:
+    '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.6" /><path d="M8 2.4a5.6 5.6 0 0 1 0 11.2z" fill="currentColor" stroke="none" /></svg>',
+  settings:
+    '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.4" /><path d="M8 1.4v2M8 12.6v2M1.4 8h2M12.6 8h2M3.3 3.3l1.4 1.4M11.3 11.3l1.4 1.4M12.7 3.3l-1.4 1.4M4.7 11.3l-1.4 1.4" /></svg>',
+  balance:
+    '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="4.6" width="12" height="6.8" rx="1.4" /><circle cx="8" cy="8" r="1.6" /></svg>',
+}
+
+function currentModelId() {
+  return state.selectedModel || config.model || DEFAULT_MODEL
+}
+
+function closeMoreMenu() {
+  if (!state.moreMenuOpen) return
+  state.moreMenuOpen = false
+  el['more-menu'].hidden = true
+  el['more-btn'].classList.remove('is-open')
+  el['more-btn'].setAttribute('aria-expanded', 'false')
+}
+
+function moreMenuItems() {
+  const balanceText = String(el.balance.textContent || '').replace(/^余额\s*/, '')
+  return [
+    { key: 'model', label: '模型', value: currentModelId() },
+    { key: 'theme', label: '主题', value: themeName(state.theme) },
+    { key: 'settings', label: '设置', value: '' },
+    { key: 'balance', label: '余额', value: balanceText },
+  ]
+}
+
+function openMoreMenu() {
+  closeMoreMenu()
+  state.moreMenuOpen = true
+  const menu = el['more-menu']
+  menu.replaceChildren()
+  for (const item of moreMenuItems()) {
+    const row = document.createElement('div')
+    row.className = 'more-item'
+    row.setAttribute('role', 'menuitem')
+    const ico = document.createElement('span')
+    ico.className = 'ico'
+    ico.innerHTML = MORE_ICONS[item.key]
+    const label = document.createElement('span')
+    label.textContent = item.label
+    row.append(ico, label)
+    if (item.value.length > 0) {
+      const val = document.createElement('span')
+      val.className = 'val'
+      val.textContent = item.value
+      row.appendChild(val)
+    }
+    row.addEventListener('click', () => {
+      closeMoreMenu()
+      if (item.key === 'model') openModelPicker()
+      else if (item.key === 'theme') openThemePicker()
+      else if (item.key === 'settings') state.settingsOpen = true
+      else openBalanceModal()
+      renderChrome()
+    })
+    menu.appendChild(row)
+  }
+  menu.hidden = false
+  el['more-btn'].classList.add('is-open')
+  el['more-btn'].setAttribute('aria-expanded', 'true')
+}
+
+function openModelPicker() {
+  state.pendingModel = currentModelId()
+  state.modelPickerOpen = true
+}
+
+function openThemePicker() {
+  state.pendingTheme = state.theme
+  state.themePickerOpen = true
+}
+
+function openBalanceModal() {
+  state.balanceOpen = true
+}
+
+function renderPickerLists() {
+  const modelList = el['model-modal-list']
+  modelList.replaceChildren()
+  const models = state.models.length > 0 ? state.models : [{ id: currentModelId() }]
+  for (const item of models) {
+    const row = document.createElement('div')
+    row.className = 'picker-item' + (item.id === state.pendingModel ? ' is-current' : '')
+    row.setAttribute('role', 'option')
+    row.setAttribute('aria-selected', String(item.id === state.pendingModel))
+    const tick = document.createElement('span')
+    tick.className = 'tick'
+    if (item.id === state.pendingModel) {
+      tick.innerHTML =
+        '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.4 4.8 9 10 3.2" /></svg>'
+    }
+    const label = document.createElement('span')
+    label.textContent = item.id
+    row.append(tick, label)
+    row.addEventListener('click', () => {
+      state.pendingModel = item.id
+      renderChrome()
+    })
+    modelList.appendChild(row)
+  }
+
+  const themeList = el['theme-modal-list']
+  themeList.replaceChildren()
+  for (const item of THEMES) {
+    const row = document.createElement('div')
+    row.className = 'picker-item' + (item.id === state.pendingTheme ? ' is-current' : '')
+    row.setAttribute('role', 'option')
+    row.setAttribute('aria-selected', String(item.id === state.pendingTheme))
+    const tick = document.createElement('span')
+    tick.className = 'tick'
+    if (item.id === state.pendingTheme) {
+      tick.innerHTML =
+        '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.4 4.8 9 10 3.2" /></svg>'
+    }
+    const label = document.createElement('span')
+    label.textContent = item.name
+    row.append(tick, label)
+    row.addEventListener('click', () => {
+      state.pendingTheme = item.id
+      renderChrome()
+    })
+    themeList.appendChild(row)
+  }
+}
+
+function syncMoreUi() {
+  el['model-modal'].hidden = !state.modelPickerOpen
+  el['theme-modal'].hidden = !state.themePickerOpen
+  el['balance-modal'].hidden = !state.balanceOpen
+  if (state.modelPickerOpen || state.themePickerOpen) renderPickerLists()
+  if (state.balanceOpen) {
+    el['balance-amount'].textContent =
+      String(el.balance.textContent || '').replace(/^余额\s*/, '') || '--'
+  }
 }
 
 let toolbarTipTimer = 0
