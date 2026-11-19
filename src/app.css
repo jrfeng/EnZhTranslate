@@ -2513,6 +2513,32 @@ html[data-theme='d'] .card-icon-btn.on {
   /* 待实现（如果需要单独一档） */
 }
 
+/* 紧凑档（≤640）：两列改单列，顺序是 原文 → 术语 → 译文 */
+@media (max-width: 640px) {
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    /* 原文 / 术语 / 译文：上下两块平分剩余高度 */
+    grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  /* 拆掉列容器，让三块直接成为同一列的兄弟节点 */
+  .col {
+    display: contents;
+  }
+
+  .grid > .card-grow {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .grid > .card-grow textarea,
+  .grid > .card-grow .editor {
+    min-height: 0;
+  }
+}
+
 @media (max-width: 639px) {
   /* 紧凑：待实现 */
 }
