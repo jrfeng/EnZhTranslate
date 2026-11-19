@@ -2460,6 +2460,11 @@ html[data-theme='d'] .card-icon-btn.on {
   height: 24px;
 }
 
+/* 预览 / Markdown 图标线更细，和清除、Copy 保持一致 */
+.card-icon-btn#view-icon svg {
+  stroke-width: 1.1;
+}
+
 .card-icon-btn svg text {
   stroke: none;
 }
