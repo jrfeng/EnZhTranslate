@@ -1603,6 +1603,11 @@ function buildContextItems(region, event) {
   if (region === 'image') {
     const hasImage = state.image !== null
     items.push({
+      label: '删除',
+      disabled: !hasImage,
+      run: () => clearImage(),
+    })
+    items.push({
       label: '校验',
       disabled: !hasImage,
       run: () => void openVerify(),
@@ -1611,11 +1616,6 @@ function buildContextItems(region, event) {
       label: '重新识别',
       disabled: !hasImage || state.ocrBusy,
       run: () => refreshOcr(),
-    })
-    items.push({
-      label: '删除',
-      disabled: !hasImage,
-      run: () => clearImage(),
     })
     return items
   }
