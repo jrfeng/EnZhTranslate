@@ -2868,3 +2868,161 @@ input,
   user-select: none;
   -webkit-user-select: none;
 }
+
+
+/* ============================================================================
+   手机宽度（≤480）：工具栏两行 + 底部操作条 + 全屏抽屉
+   ========================================================================== */
+
+.mobile-bar {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 8px 12px 10px;
+  border-top: var(--app-line) solid var(--app-border);
+  background: var(--app-top);
+}
+
+.mobile-btn {
+  height: 48px;
+  min-width: 48px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: var(--app-line) solid var(--app-border);
+  border-radius: 12px;
+  background: var(--app-panel);
+  color: var(--app-text);
+  font-family: inherit;
+  font-size: var(--wa-font-size-s);
+}
+
+.mobile-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.mobile-btn.primary {
+  flex: 1 1 auto;
+  background: var(--app-accent);
+  border-color: var(--app-accent);
+  color: var(--app-accent-on);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.mobile-btn.primary:disabled {
+  opacity: 0.5;
+}
+
+@media (max-width: 480px) {
+  /* 工具栏：语言对一行、余额 + 更多一行 */
+  .head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .lang-pair {
+    width: 100%;
+  }
+
+  .lang-pair .field-label {
+    display: none;
+  }
+
+  .lang-select {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+  }
+
+  .head-tools {
+    width: 100%;
+  }
+
+  /* 第二行：余额贴左，「更多」贴右 */
+  #balance-wrap {
+    order: 1;
+    margin-right: auto;
+  }
+
+  #more-btn {
+    order: 2;
+    margin-left: auto;
+  }
+
+  /* 640 时藏起来的余额，手机上要在第二行露出来 */
+  #balance-wrap {
+    display: inline-flex;
+  }
+
+  #more-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* 卡片：触控尺寸 + 字号 */
+  .card-head {
+    min-height: 48px;
+  }
+
+  .card-icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .card-icon-btn svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .card-icon-btn svg[viewBox='0 0 48 48'] {
+    width: 24px;
+    height: 24px;
+    stroke-width: 3;
+  }
+
+  .hl,
+  .input,
+  #output {
+    font-size: 15px;
+  }
+
+  /* 这些入口已经进了底部操作条 */
+  #translate,
+  #terms-icon,
+  .pick-image-fab {
+    display: none;
+  }
+
+  .mobile-bar {
+    display: flex;
+  }
+
+  /* 弹窗：全屏底部抽屉 */
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: 92vh;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .settings-form,
+  .terms-modal .terms-list {
+    max-height: none;
+  }
+}

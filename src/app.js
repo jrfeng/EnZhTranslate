@@ -198,6 +198,10 @@ for (const id of [
   'settings-toggle',
   'settings-icon-btn',
   'more-btn',
+  'mobile-image',
+  'mobile-terms',
+  'mobile-terms-label',
+  'mobile-translate',
   'more-menu',
   'model-modal',
   'model-modal-list',
@@ -809,6 +813,10 @@ function renderChrome() {  const loading = state.phase === 'loading'
   // 卡片图标按钮的 hover 提示
   el['terms-icon'].dataset.tip = '术语 ' + state.terms.length + ' 条'
   el['terms-icon-label'].textContent = '术语 ' + state.terms.length + ' 条'
+  if (el['mobile-terms-label'] !== null && el['mobile-terms-label'] !== undefined) {
+    el['mobile-terms-label'].textContent = '术语 ' + state.terms.length
+    el['mobile-translate'].disabled = el.translate.disabled
+  }
   el['immediate-icon'].dataset.tip = state.immediate ? '粘贴后翻译：开' : '粘贴后翻译：关'
   el['clear-icon'].dataset.tip = '清除'
   el['auto-copy-icon'].dataset.tip = state.autoCopy ? '自动复制：开' : '自动复制：关'
@@ -2113,6 +2121,74 @@ function bind() {
     renderChrome()
     el['term-source'].focus()
   })
+
+  // 手机底部操作条
+  el['mobile-image'].addEventListener('click', () => el['image-input'].click())
+
+  el['mobile-terms'].addEventListener('click', () => {
+    state.termsModalOpen = true
+    renderChrome()
+    el['term-source'].focus()
+  })
+
+  el['mobile-translate'].addEventListener('click', () => {
+    if (el['mobile-translate'].disabled) return
+    void run()
+  })
+
+  // 触屏长按 = 右键：向落点补发一个 contextmenu，复用现有菜单逻辑
+  let longPressTimer = 0
+  let longPressOrigin = null
+
+  document.addEventListener(
+    'pointerdown',
+    (event) => {
+      if (event.pointerType !== 'touch') return
+      longPressOrigin = { x: event.clientX, y: event.clientY, target: event.target }
+      window.clearTimeout(longPressTimer)
+      longPressTimer = window.setTimeout(() => {
+        const origin = longPressOrigin
+        longPressOrigin = null
+        if (origin === null) return
+        origin.target.dispatchEvent(
+          new MouseEvent('contextmenu', {
+            bubbles: true,
+            cancelable: true,
+            button: 2,
+            clientX: origin.x,
+            clientY: origin.y,
+          }),
+        )
+      }, 500)
+    },
+    { passive: true },
+  )
+
+  document.addEventListener(
+    'pointermove',
+    (event) => {
+      if (longPressOrigin === null) return
+      if (
+        Math.abs(event.clientX - longPressOrigin.x) > 8 ||
+        Math.abs(event.clientY - longPressOrigin.y) > 8
+      ) {
+        window.clearTimeout(longPressTimer)
+        longPressOrigin = null
+      }
+    },
+    { passive: true },
+  )
+
+  for (const type of ['pointerup', 'pointercancel']) {
+    document.addEventListener(
+      type,
+      () => {
+        window.clearTimeout(longPressTimer)
+        longPressOrigin = null
+      },
+      { passive: true },
+    )
+  }
 
   el['more-btn'].addEventListener('click', (event) => {
     event.stopPropagation()
