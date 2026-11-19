@@ -2477,7 +2477,7 @@ html[data-theme='d'] .card-icon-btn.on {
   padding: 0 10px 0 8px;
   border: var(--app-line) solid var(--app-border);
   font-family: inherit;
-  font-size: var(--wa-font-size-s);
+  font-size: var(--wa-font-size-xs);
   color: var(--app-muted);
 }
 
