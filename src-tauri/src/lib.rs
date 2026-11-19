@@ -456,7 +456,7 @@ fn window_size_file(app: &tauri::AppHandle) -> Option<std::path::PathBuf> {
     app.path().app_config_dir().ok().map(|dir| dir.join("window-size.json"))
 }
 
-/// 关闭窗口前把当前逻辑尺寸写盘；最大化 / 全屏时保留上一次的值
+/// 关闭窗口前把当前逻辑尺寸和位置写盘；最大化 / 全屏时保留上一次的值
 fn save_window_size(window: &tauri::WebviewWindow) {
     if window.is_maximized().unwrap_or(false) || window.is_fullscreen().unwrap_or(false) {
         return;
@@ -468,15 +468,36 @@ fn save_window_size(window: &tauri::WebviewWindow) {
     if width < 360 || height < 480 {
         return;
     }
+    let position = window.outer_position().ok().map(|pos| {
+        (
+            (pos.x as f64 / scale).round() as i64,
+            (pos.y as f64 / scale).round() as i64,
+        )
+    });
     let Some(path) = window_size_file(&window.app_handle()) else { return };
     if let Some(dir) = path.parent() {
         let _ = std::fs::create_dir_all(dir);
     }
-    let body = json!({ "width": width, "height": height });
+    let body = match position {
+        Some((x, y)) => json!({ "x": x, "y": y, "width": width, "height": height }),
+        None => json!({ "width": width, "height": height }),
+    };
     let _ = std::fs::write(path, body.to_string());
 }
 
-/// 启动时按上次保存的尺寸恢复；数值不合理就当作没有记录
+/// 位置是否还落在某块显示器上（至少露出 120×80，避免整窗跑到屏幕外）
+fn position_is_visible(window: &tauri::WebviewWindow, x: i32, y: i32, w: i32, h: i32) -> bool {
+    let Ok(monitors) = window.available_monitors() else { return false };
+    monitors.iter().any(|monitor| {
+        let pos = monitor.position();
+        let size = monitor.size();
+        let monitor_right = pos.x + size.width as i32;
+        let monitor_bottom = pos.y + size.height as i32;
+        x + w > pos.x + 120 && x < monitor_right - 120 && y + h > pos.y + 40 && y < monitor_bottom - 40
+    })
+}
+
+/// 启动时按上次保存的尺寸和位置恢复；数值不合理就当作没有记录
 fn restore_window_size(app: &tauri::App) {
     let Some(window) = app.get_webview_window("main") else { return };
     let Some(path) = window_size_file(&app.handle()) else { return };
@@ -488,6 +509,25 @@ fn restore_window_size(app: &tauri::App) {
         return;
     }
     let _ = window.set_size(tauri::LogicalSize::new(width, height));
+
+    let (Some(x), Some(y)) = (
+        value.get("x").and_then(Value::as_f64),
+        value.get("y").and_then(Value::as_f64),
+    ) else {
+        return;
+    };
+    if !(-32768.0..=32768.0).contains(&x) || !(-32768.0..=32768.0).contains(&y) {
+        return;
+    }
+    let scale = window.scale_factor().unwrap_or(1.0);
+    let physical_x = (x * scale).round() as i32;
+    let physical_y = (y * scale).round() as i32;
+    let physical_w = (width * scale).round() as i32;
+    let physical_h = (height * scale).round() as i32;
+    if !position_is_visible(&window, physical_x, physical_y, physical_w, physical_h) {
+        return;
+    }
+    let _ = window.set_position(tauri::LogicalPosition::new(x, y));
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
