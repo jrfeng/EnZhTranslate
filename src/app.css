@@ -2470,6 +2470,26 @@ html[data-theme='d'] .card-icon-btn.on {
   stroke-width: 0.65;
 }
 
+/* 术语按钮带文字：宽度自适应 + 描边 */
+.card-icon-btn.with-label {
+  width: auto;
+  gap: 5px;
+  padding: 0 10px 0 8px;
+  border: var(--app-line) solid var(--app-border);
+  font-family: inherit;
+  font-size: var(--wa-font-size-s);
+  color: var(--app-muted);
+}
+
+.card-icon-btn.with-label:hover {
+  background: var(--app-panel);
+  color: var(--app-text);
+}
+
+.card-icon-btn .card-icon-label {
+  white-space: nowrap;
+}
+
 .card-icon-btn svg text {
   stroke: none;
 }

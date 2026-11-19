@@ -265,6 +265,7 @@ for (const id of [
   'immediate',
   'immediate-icon',
   'terms-icon',
+  'terms-icon-label',
   'clear-icon',
   'auto-copy-icon',
   'view-icon',
@@ -780,6 +781,7 @@ function renderChrome() {  const loading = state.phase === 'loading'
 
   // 卡片图标按钮的 hover 提示
   el['terms-icon'].dataset.tip = '术语 ' + state.terms.length + ' 条'
+  el['terms-icon-label'].textContent = '术语 ' + state.terms.length + ' 条'
   el['immediate-icon'].dataset.tip = state.immediate ? '粘贴后翻译：开' : '粘贴后翻译：关'
   el['clear-icon'].dataset.tip = '清除'
   el['auto-copy-icon'].dataset.tip = state.autoCopy ? '自动复制：开' : '自动复制：关'
