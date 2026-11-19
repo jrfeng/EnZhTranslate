@@ -2465,9 +2465,9 @@ html[data-theme='d'] .card-icon-btn.on {
   stroke-width: 1.1;
 }
 
-/* 术语图标同样用细线 */
+/* 术语图标是 16 网格放大到 24px（×1.5），线宽要按比例折回去才够细 */
 .card-icon-btn#terms-icon svg {
-  stroke-width: 1.1;
+  stroke-width: 0.65;
 }
 
 .card-icon-btn svg text {
