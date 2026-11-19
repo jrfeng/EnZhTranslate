@@ -3269,6 +3269,9 @@ input,
   .verify-preview {
     grid-row: 3;
     margin: 0 12px;
+    /* 基础样式里有 width: 100%，在带 margin 的网格项上会撑出边界 */
+    width: auto;
+    max-width: 100%;
     padding: 12px;
     border: var(--app-line) solid var(--app-border);
     border-radius: 12px;
