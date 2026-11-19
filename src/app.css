@@ -1456,11 +1456,13 @@ html[data-theme='c'] .hl-code {
   stroke-linejoin: round;
 }
 
+/* 与卡片标题（原文 / 译文）保持同一套字号和颜色 */
 .terms-label {
-  font-size: var(--wa-font-size-s);
-  font-weight: 600;
-  /* 用透明度压淡，四套主题下都不用单独调色 */
-  opacity: 0.72;
+  flex: 0 0 auto;
+  font-size: var(--wa-font-size-xs);
+  font-weight: var(--app-label-weight);
+  letter-spacing: 0.06em;
+  color: var(--app-muted);
 }
 
 .terms-go {
