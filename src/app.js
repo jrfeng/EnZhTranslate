@@ -2040,11 +2040,11 @@ function bind() {
     renderChrome()
   })
 
+  // 宽度跨过 768 时，编辑区要在面板和弹窗之间搬回去/搬过来，
+  // 所以每次 resize 都要重渲染（否则宽屏面板会只剩一个空壳）
   window.addEventListener('resize', () => {
-    if (!window.matchMedia('(max-width: 768px)').matches && state.termsModalOpen) {
-      state.termsModalOpen = false
-      renderChrome()
-    }
+    if (!window.matchMedia('(max-width: 768px)').matches) state.termsModalOpen = false
+    renderChrome()
   })
   el['term-clear'].addEventListener('click', () => {
     if (state.terms.length === 0) return
