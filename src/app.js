@@ -731,6 +731,7 @@ function renderChrome() {  const loading = state.phase === 'loading'
   el.translate.disabled = state.input.trim().length === 0 || loading || ocrBusy
   el.translate.textContent = loading ? '翻译中…' : '翻译'
   el.clear.disabled = (state.input.length === 0 && state.image === null) || ocrBusy
+  el['clear-icon'].disabled = el.clear.disabled
   el['pick-image'].hidden = !usesDeepSeekEndpoint()
   el['pick-image'].disabled = ocrBusy || loading
   // 非 DeepSeek 地址没有余额接口
@@ -1987,7 +1988,7 @@ function bind() {
   })
 
   el.translate.addEventListener('click', () => void run())
-  el.clear.addEventListener('click', () => {
+  function clearAll() {
     state.runId += 1
     state.input = ''
     state.output = ''
@@ -2004,7 +2005,9 @@ function bind() {
     syncHighlight()
     render()
     el.source.focus()
-  })
+  }
+
+  el.clear.addEventListener('click', clearAll)
 
   el.copy.addEventListener('click', () => void copyText(state.output))
 
@@ -2035,7 +2038,7 @@ function bind() {
   el['immediate-icon'].addEventListener('click', toggleImmediate)
 
   // 图标版「清除」和文字版走同一个函数
-  el['clear-icon'].addEventListener('click', () => el['clear'].click())
+  el['clear-icon'].addEventListener('click', clearAll)
 
   el['terms-trigger'].addEventListener('click', () => {
     state.termsModalOpen = true
