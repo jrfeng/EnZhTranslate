@@ -529,23 +529,10 @@ html[data-theme='c'] .win-btn-close:hover {
   background: var(--app-border);
 }
 
-/* 设置按钮上的「未配置 API Key」小红点 */
 .settings-wrap {
   position: relative;
   display: inline-flex;
   flex: 0 0 auto;
-}
-
-.status-dot {
-  position: absolute;
-  top: 4px;
-  right: 6px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--wa-color-danger-fill-loud, #d32f2f);
-  box-shadow: 0 0 0 2px var(--app-top);
-  pointer-events: none;
 }
 
 /* 模型名可能较长（deepseek-reasoner 之类），留足显示宽度 */
@@ -2235,6 +2222,11 @@ html[data-theme='d'] .icon-btn svg {
   stroke-width: 1.7;
 }
 
+/* 齿轮用的是 24 视图，缩到 15px 后按比例加粗 */
+.icon-btn svg[viewBox='0 0 24 24'] {
+  stroke-width: 2.1;
+}
+
 /* 当前项：底色 + 强调色文字，跟主题走 */
 .icon-menu-item.is-current {
   background: var(--app-panel-2);
@@ -2275,6 +2267,11 @@ html[data-theme='d'] .toolbar-tip {
 
   .icon-btn {
     display: inline-flex;
+  }
+
+  /* 设置一栏：文字按钮换成齿轮图标 */
+  #settings-toggle {
+    display: none;
   }
 }
 

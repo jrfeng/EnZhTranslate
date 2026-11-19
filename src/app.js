@@ -186,7 +186,7 @@ const state = {
 const el = {}
 for (const id of [
   'settings-toggle',
-  'settings-dot',
+  'settings-icon-btn',
   'settings-x',
   'settings',
   'balance',
@@ -754,7 +754,6 @@ function renderChrome() {  const loading = state.phase === 'loading'
 
   el.settings.hidden = !state.settingsOpen
   el['settings-toggle'].setAttribute('aria-expanded', String(state.settingsOpen))
-  el['settings-dot'].hidden = config.apiKey.length > 0
 
   el['terms-toggle'].textContent = state.termsOpen ? '收起' : '展开'
   el['terms-body'].hidden = !state.termsOpen
@@ -2084,6 +2083,11 @@ function bind() {
 
   bindWindowControls()
 
+  el['settings-icon-btn'].addEventListener('click', () => {
+    state.settingsOpen = true
+    renderChrome()
+  })
+
   el['model-icon-btn'].addEventListener('click', (event) => {
     event.stopPropagation()
     toggleIconMenu('model')
@@ -2094,7 +2098,7 @@ function bind() {
     toggleIconMenu('theme')
   })
 
-  for (const button of [el['model-icon-btn'], el['theme-icon-btn']]) {
+  for (const button of [el['model-icon-btn'], el['theme-icon-btn'], el['settings-icon-btn']]) {
     button.addEventListener('mouseenter', () => showToolbarTip(button))
     button.addEventListener('mouseleave', hideToolbarTip)
     button.addEventListener('blur', hideToolbarTip)
@@ -2536,6 +2540,10 @@ function syncIconButtons() {
     const svg = themeButton.querySelector('svg')
     if (svg !== null) svg.innerHTML = currentThemeIcon()
     themeButton.dataset.tip = '主题：' + themeName(state.theme)
+  }
+  const settingsButton = el['settings-icon-btn']
+  if (settingsButton !== null && settingsButton !== undefined) {
+    settingsButton.dataset.tip = '设置'
   }
   const modelButton = el['model-icon-btn']
   if (modelButton !== null && modelButton !== undefined) {
