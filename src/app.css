@@ -2432,8 +2432,8 @@ html[data-theme='d'] .card-icon-btn.on {
 .card-icon-btn:disabled {
   opacity: 0.32;
   color: var(--app-muted);
-  cursor: default;
-  pointer-events: none;
+  /* 保留指针事件，否则浏览器不会显示禁用光标 */
+  cursor: not-allowed;
 }
 
 .card-icon-btn svg {
