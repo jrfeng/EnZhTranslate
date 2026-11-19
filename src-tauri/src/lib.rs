@@ -451,6 +451,45 @@ fn app_ready(window: tauri::Window) -> Value {
     json!({ "ok": true })
 }
 
+/// 窗口尺寸的保存位置：应用配置目录下的 window-size.json
+fn window_size_file(app: &tauri::AppHandle) -> Option<std::path::PathBuf> {
+    app.path().app_config_dir().ok().map(|dir| dir.join("window-size.json"))
+}
+
+/// 关闭窗口前把当前逻辑尺寸写盘；最大化 / 全屏时保留上一次的值
+fn save_window_size(window: &tauri::WebviewWindow) {
+    if window.is_maximized().unwrap_or(false) || window.is_fullscreen().unwrap_or(false) {
+        return;
+    }
+    let Ok(size) = window.inner_size() else { return };
+    let scale = window.scale_factor().unwrap_or(1.0);
+    let width = (size.width as f64 / scale).round() as i64;
+    let height = (size.height as f64 / scale).round() as i64;
+    if width < 360 || height < 480 {
+        return;
+    }
+    let Some(path) = window_size_file(&window.app_handle()) else { return };
+    if let Some(dir) = path.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    let body = json!({ "width": width, "height": height });
+    let _ = std::fs::write(path, body.to_string());
+}
+
+/// 启动时按上次保存的尺寸恢复；数值不合理就当作没有记录
+fn restore_window_size(app: &tauri::App) {
+    let Some(window) = app.get_webview_window("main") else { return };
+    let Some(path) = window_size_file(&app.handle()) else { return };
+    let Ok(content) = std::fs::read_to_string(path) else { return };
+    let Ok(value) = serde_json::from_str::<Value>(&content) else { return };
+    let width = value.get("width").and_then(Value::as_f64).unwrap_or(0.0);
+    let height = value.get("height").and_then(Value::as_f64).unwrap_or(0.0);
+    if !(360.0..=7680.0).contains(&width) || !(480.0..=4320.0).contains(&height) {
+        return;
+    }
+    let _ = window.set_size(tauri::LogicalSize::new(width, height));
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {    // GUI 版没有控制台，把 panic 文本落盘，方便事后排查
     std::panic::set_hook(Box::new(|info| {
@@ -460,7 +499,7 @@ pub fn run() {    // GUI 版没有控制台，把 panic 文本落盘，方便事
         eprintln!("{text}");
     }));
 
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         // 全局只保留一个实例：再次双击时把已有窗口唤到前面，然后退出新进程
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
@@ -479,6 +518,7 @@ pub fn run() {    // GUI 版没有控制台，把 panic 文本落盘，方便事
             app_ready
         ])
         .setup(|app| {
+            restore_window_size(app);
             // 兜底：前端万一没跑起来也别留一个看不见的进程
             let handle = app.handle().clone();
             std::thread::spawn(move || {
@@ -489,6 +529,16 @@ pub fn run() {    // GUI 版没有控制台，把 panic 文本落盘，方便事
             });
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application");
+
+    app.run(|app_handle, event| {
+        if let tauri::RunEvent::WindowEvent { label, event, .. } = &event {
+            if label == "main" && matches!(event, tauri::WindowEvent::CloseRequested { .. }) {
+                if let Some(window) = app_handle.get_webview_window("main") {
+                    save_window_size(&window);
+                }
+            }
+        }
+    });
 }
