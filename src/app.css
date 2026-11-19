@@ -3037,6 +3037,25 @@ input,
 @media (max-width: 480px) {
   .terms-modal .terms-add {
     gap: 6px;
+    order: 2;
+    border-top: 1px solid var(--app-border);
+    padding-top: 10px;
+    padding-bottom: 4px;
+    flex: 0 0 auto;
+  }
+
+  /* 列表在上、输入条在下 */
+  #terms-body {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  #terms-body .terms-list {
+    order: 1;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
   }
 
   .terms-modal .term-join {

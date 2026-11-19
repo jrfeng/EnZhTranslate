@@ -1050,7 +1050,7 @@ function renderTerms() {
     if (targetText.length > 0) {
       const arrow = document.createElement('span')
       arrow.className = 'term-arrow'
-      arrow.textContent = '翻译成'
+      arrow.textContent = window.matchMedia('(max-width: 480px)').matches ? '→' : '翻译成'
 
       const to = document.createElement('span')
       to.className = 'term-token'
