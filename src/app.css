@@ -2633,6 +2633,24 @@ html[data-theme='d'] .card-icon-btn.on {
   #terms-icon {
     display: inline-flex;
   }
+
+  /* 紧凑档给术语入口一点强调底色 */
+  .card-icon-btn.with-label {
+    background: color-mix(in srgb, var(--app-accent) 12%, var(--app-panel));
+    border-color: color-mix(in srgb, var(--app-accent) 32%, var(--app-border));
+    color: var(--app-accent);
+  }
+
+  .card-icon-btn.with-label:hover {
+    background: color-mix(in srgb, var(--app-accent) 20%, var(--app-panel));
+    color: var(--app-accent);
+  }
+}
+
+@supports not (background: color-mix(in srgb, red 10%, white)) {
+  .card-icon-btn.with-label {
+    background: var(--app-panel-2);
+  }
 }
 
 @media (max-width: 639px) {
