@@ -1,5 +1,5 @@
 import { build } from 'esbuild'
-import { cp, copyFile, mkdir, readFile, rm } from 'node:fs/promises'
+import { cp, copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -29,9 +29,17 @@ await build({
   },
 })
 
-for (const file of ['index.html', 'app.css', 'boot-head.js', 'boot-body.js']) {
+for (const file of ['index.html', 'app.css', 'boot-head.js']) {
   await copyFile(join(src, file), join(out, file))
 }
+
+// boot-body.js 里的「首屏兜底延时」默认关闭：FISH_BOOT_GUARD=1 才打开
+const bootBody = await readFile(join(src, 'boot-body.js'), 'utf8')
+const bootGuardEnabled = process.env.FISH_BOOT_GUARD === '1'
+await writeFile(
+  join(out, 'boot-body.js'),
+  bootBody.replace('var BOOT_GUARD_DEFAULT = false', `var BOOT_GUARD_DEFAULT = ${bootGuardEnabled}`),
+)
 
 // 静态图片资源（空译文区的水印等）
 await cp(join(src, 'assets'), join(out, 'assets'), { recursive: true })
