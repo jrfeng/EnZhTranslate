@@ -3037,9 +3037,36 @@ function moreMenuItems() {
 /// 窗口从 ≤640 被拉宽后，「更多」按钮会消失，菜单必须一起收起
 const compactMoreQuery = window.matchMedia('(max-width: 640px)')
 
-compactMoreQuery.addEventListener('change', (event) => {
-  if (!event.matches) closeMoreMenu()
-})
+/** 拉宽到 >640 后，从「更多」打开的四个弹窗也要一起收起 */
+function closeCompactDialogs() {
+  if (!state.modelPickerOpen && !state.themePickerOpen && !state.settingsOpen && !state.balanceOpen) {
+    return
+  }
+  state.modelPickerOpen = false
+  state.themePickerOpen = false
+  state.settingsOpen = false
+  state.balanceOpen = false
+  renderChrome()
+}
+
+function handleCompactExit() {
+  closeMoreMenu()
+  closeCompactDialogs()
+}
+
+let compactWidth = window.innerWidth <= 640
+
+/// 同步一次「是否处于窄布局」，从窄变宽时收起菜单和弹窗
+function syncCompactWidth() {
+  const compact = window.innerWidth <= 640
+  if (compact === compactWidth) return
+  compactWidth = compact
+  if (!compact) handleCompactExit()
+}
+
+compactMoreQuery.addEventListener('change', syncCompactWidth)
+// matchMedia 在部分环境（弹窗打开、虚拟时间等）不一定派发 change，resize 同步兜一道
+window.addEventListener('resize', syncCompactWidth)
 
 function openMoreMenu() {
   closeMoreMenu()
