@@ -2435,9 +2435,14 @@ html[data-theme='d'] .picker-item .tick svg {
   padding: 4px 16px 18px;
 }
 
-/* 余额弹窗里的刷新进度：贴着标题下沿的一条扫光，手动刷新至少显示 1 秒 */
+/* 余额弹窗里的刷新进度：贴着标题下沿的一条扫光，手动刷新至少显示 1 秒。
+   用 visibility 而不是 display，保证显示/隐藏时弹窗高度不变 */
 .balance-modal-progress {
   border-radius: 0;
+}
+
+.balance-modal-progress.is-idle {
+  visibility: hidden;
 }
 
 .balance-amount {
