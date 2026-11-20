@@ -1273,6 +1273,11 @@ html[data-theme='d'] .image-strip-icon {
   box-shadow: 2px 2px 0 #1b2a4a;
 }
 
+.image-strip-icon:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .image-strip-icon:hover {
   background: var(--app-panel-2);
   color: var(--app-text);

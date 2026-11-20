@@ -779,6 +779,11 @@ function renderChrome() {  const loading = state.phase === 'loading'
   el['image-refresh'].disabled = ocrBusy || loading
   el['image-refresh'].classList.toggle('is-spinning', ocrBusy)
 
+  // 识别还没结束（或失败/重试中）时不开放「校验」：图都还没认完，进去也没内容可改
+  const verifyDisabled = ocrBusy || state.image === null
+  el['image-zoom'].disabled = verifyDisabled
+  el['image-zoom-icon'].disabled = verifyDisabled
+
   el['image-preview'].hidden = state.image === null
   if (state.image !== null) {
     el['image-name'].textContent = state.image.name
@@ -1660,7 +1665,7 @@ function buildContextItems(region, event) {
     })
     items.push({
       label: '校验',
-      disabled: !hasImage,
+      disabled: !hasImage || state.ocrBusy,
       run: () => void openVerify(),
     })
     items.push({
@@ -2636,6 +2641,8 @@ function renderVerifyView() {
 
 /** 打开校验弹窗：整页大小的浮层，上面看图片、下面改文字 */
 function openVerify() {
+  // 识别中直接忽略，避免打开一个空弹窗
+  if (state.ocrBusy) return
   resetVerifyStage()
   if (state.image === null) return
   el['verify-image'].src = state.image.dataUrl
