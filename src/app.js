@@ -2935,6 +2935,8 @@ function applyTheme(theme) {
   const id = resolveTheme(chosen)
   document.documentElement.dataset.theme = id
   document.documentElement.classList.toggle('wa-dark', id === 'a')
+  // 把解析后的主题交给 Rust：下次启动窗口的底色直接用它，避免深浅色闪烁
+  void invokeTauri('save_theme', { theme: id })
 }
 
 // 选「跟随系统」时，系统深浅色一变就跟着变
