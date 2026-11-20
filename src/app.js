@@ -3031,6 +3031,13 @@ function moreMenuItems() {
   ]
 }
 
+/// 窗口从 ≤640 被拉宽后，「更多」按钮会消失，菜单必须一起收起
+const compactMoreQuery = window.matchMedia('(max-width: 640px)')
+
+compactMoreQuery.addEventListener('change', (event) => {
+  if (!event.matches) closeMoreMenu()
+})
+
 function openMoreMenu() {
   closeMoreMenu()
   state.moreMenuOpen = true
