@@ -33,5 +33,5 @@
 | 文件 | 位置 | 作用 |
 |---|---|---|
 | `theme.json` | `%APPDATA%\com.local.fish.translate\` | 上次解析后的主题 id，供 Rust 设置窗口底色 |
-| `window-size.json` | `%APPDATA%\com.local.fish.translate\` | 上次的窗口几何（`x/y/width/height/maximized`） |
+| `window-size.json` | `%APPDATA%\com.local.fish.translate\` | 上次的窗口几何（`x/y/width/height`） |
 | `fish-window.log` | `%TEMP%\` | 仅 debug 构建：窗口几何的保存/恢复日志 |

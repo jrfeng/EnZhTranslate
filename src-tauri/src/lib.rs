@@ -450,10 +450,6 @@ fn app_ready(window: tauri::WebviewWindow) -> Value {
     restore_window_size(&window);
     let _ = window.show();
     restore_window_size(&window);
-    if startup_maximized() {
-        let _ = window.maximize();
-        window_log("restore: maximized");
-    }
     let _ = window.set_focus();
     json!({ "ok": true })
 }
@@ -565,13 +561,10 @@ struct WindowGeometry {
 struct SavedState {
     geometry: WindowGeometry,
     has_position: bool,
-    maximized: bool,
 }
 
 /// 最后一次"非最大化"的几何：最大化关闭时用它写盘
 static LAST_NORMAL: std::sync::Mutex<Option<WindowGeometry>> = std::sync::Mutex::new(None);
-/// 启动时读到的状态，供 setup / app_ready 复用
-static STARTUP_STATE: std::sync::Mutex<Option<SavedState>> = std::sync::Mutex::new(None);
 
 impl SavedState {
     fn valid(&self) -> bool {
@@ -594,9 +587,26 @@ fn current_geometry(window: &tauri::WebviewWindow) -> Option<WindowGeometry> {
     })
 }
 
+/// 几何是否接近某块显示器尺寸：最大化动画过程中会短暂出现这种尺寸，
+/// 不能把它当成"用户想要的尺寸"记下来
+fn is_screen_sized(window: &tauri::WebviewWindow, geometry: &WindowGeometry) -> bool {
+    let Ok(monitors) = window.available_monitors() else { return false };
+    let scale = window.scale_factor().unwrap_or(1.0);
+    monitors.iter().any(|monitor| {
+        let size = monitor.size();
+        let logical_width = (size.width as f64 / scale).round() as i32;
+        let logical_height = (size.height as f64 / scale).round() as i32;
+        geometry.width >= (logical_width as f64 * 0.92) as i32
+            && geometry.height >= (logical_height as f64 * 0.92) as i32
+    })
+}
+
 fn update_last_normal(window: &tauri::WebviewWindow) {
     let Some(geometry) = current_geometry(window) else { return };
     if geometry.width < 360 || geometry.height < 480 {
+        return;
+    }
+    if is_screen_sized(window, &geometry) {
         return;
     }
     if let Ok(mut slot) = LAST_NORMAL.lock() {
@@ -616,7 +626,6 @@ fn read_saved_state(window: &tauri::WebviewWindow) -> Option<SavedState> {
     let height = value.get("height").and_then(Value::as_i64).unwrap_or(0) as i32;
     let x = value.get("x").and_then(Value::as_i64).map(|v| v as i32);
     let y = value.get("y").and_then(Value::as_i64).map(|v| v as i32);
-    let maximized = value.get("maximized").and_then(Value::as_bool).unwrap_or(false);
     let (x, y, has_position) = match (x, y) {
         (Some(x), Some(y)) => (x, y, true),
         _ => (0, 0, false),
@@ -624,7 +633,6 @@ fn read_saved_state(window: &tauri::WebviewWindow) -> Option<SavedState> {
     let state = SavedState {
         geometry: WindowGeometry { x, y, width, height },
         has_position,
-        maximized,
     };
     state.valid().then_some(state)
 }
@@ -639,7 +647,6 @@ fn write_saved_state(window: &tauri::WebviewWindow, state: SavedState) {
         "version": 1,
         "width": geometry.width,
         "height": geometry.height,
-        "maximized": state.maximized,
     });
     if state.has_position {
         body["x"] = json!(geometry.x);
@@ -647,8 +654,8 @@ fn write_saved_state(window: &tauri::WebviewWindow, state: SavedState) {
     }
     let _ = std::fs::write(path, body.to_string());
     window_log(&format!(
-        "save {}x{} @ {},{} maximized={}",
-        geometry.width, geometry.height, geometry.x, geometry.y, state.maximized
+        "save {}x{} @ {},{}",
+        geometry.width, geometry.height, geometry.x, geometry.y
     ));
 }
 
@@ -663,9 +670,21 @@ fn save_window_size(window: &tauri::WebviewWindow, reason: &str) {
         update_last_normal(window);
     }
     let geometry = if maximized {
-        match last_normal().or_else(|| read_saved_state(window).map(|state| state.geometry)) {
+        // LAST_NORMAL 可能被最大化动画污染成屏幕尺寸，这里再过滤一次；
+        // 实在没有可用值就沿用旧文件里的记录（宁可不更新，也不写屏幕尺寸）
+        let candidate = last_normal()
+            .filter(|geometry| !is_screen_sized(window, geometry))
+            .or_else(|| {
+                read_saved_state(window)
+                    .map(|state| state.geometry)
+                    .filter(|geometry| !is_screen_sized(window, geometry))
+            });
+        match candidate {
             Some(geometry) => geometry,
-            None => return,
+            None => {
+                window_log("skip save: no valid normal geometry while maximized");
+                return;
+            }
         }
     } else {
         match current_geometry(window) {
@@ -673,7 +692,7 @@ fn save_window_size(window: &tauri::WebviewWindow, reason: &str) {
             None => return,
         }
     };
-    let state = SavedState { geometry, has_position: true, maximized };
+    let state = SavedState { geometry, has_position: true };
     if !state.valid() {
         window_log(&format!("skip save ({reason}): invalid geometry"));
         return;
@@ -736,21 +755,10 @@ fn restore_window_size(window: &tauri::WebviewWindow) {
     if let Ok(mut slot) = LAST_NORMAL.lock() {
         *slot = Some(geometry);
     }
-    if let Ok(mut slot) = STARTUP_STATE.lock() {
-        *slot = Some(state);
-    }
     window_log(&format!(
-        "restore {}x{} @ {},{} maximized={}",
-        geometry.width, geometry.height, geometry.x, geometry.y, state.maximized
+        "restore {}x{} @ {},{}",
+        geometry.width, geometry.height, geometry.x, geometry.y
     ));
-}
-
-fn startup_maximized() -> bool {
-    STARTUP_STATE
-        .lock()
-        .ok()
-        .and_then(|slot| slot.map(|state| state.maximized))
-        .unwrap_or(false)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -788,11 +796,9 @@ pub fn run() {    // GUI 版没有控制台，把 panic 文本落盘，方便事
                 // ② 再按上次主题给窗口上底色
                 let theme_id = startup_theme_id(&window);
                 apply_window_theme_color(&window, &theme_id);
-                // ③ 上次是最大化的话，显示前就最大化，避免先闪一帧普通尺寸
-                if startup_maximized() {
-                    let _ = window.maximize();
-                }
-                // ④ 最后显示：底色和几何都已就位，页面还有遮罩盖着
+                // ③ 最后显示：底色和几何都已就位，页面还有遮罩盖着
+                // 注意：即使上次是最大化关闭，也恢复到「最大化前的尺寸」，
+                // 不自动最大化，避免启动瞬间的最大化动画/闪动
                 let _ = window.show();
             }
             Ok(())
