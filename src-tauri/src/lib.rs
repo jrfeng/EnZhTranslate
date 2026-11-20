@@ -445,8 +445,11 @@ async fn clipboard_write(request: ClipboardWriteRequest) -> Value {
 
 /// 前端把首屏渲染完之后调用：这时才把窗口显示出来，避免启动时闪白
 #[tauri::command]
-fn app_ready(window: tauri::Window) -> Value {
+fn app_ready(window: tauri::WebviewWindow) -> Value {
+    // 显示前后各应用一次：WebView2 首帧时可能把窗口尺寸改回配置里的默认值
+    restore_window_size(&window);
     let _ = window.show();
+    restore_window_size(&window);
     let _ = window.set_focus();
     json!({ "ok": true })
 }
@@ -512,6 +515,106 @@ fn save_theme(window: tauri::WebviewWindow, request: ThemeRequest) -> Value {
     json!({ "ok": true })
 }
 
+// ---------------------------------------------------------------- 窗口几何记忆
+
+/// 窗口尺寸的保存位置：应用配置目录下的 window-size.json
+fn window_size_file(app: &tauri::AppHandle) -> Option<std::path::PathBuf> {
+    app.path().app_config_dir().ok().map(|dir| dir.join("window-size.json"))
+}
+
+/// 关闭窗口前把当前逻辑尺寸和位置写盘；最大化 / 全屏时保留上一次的值
+fn save_window_size(window: &tauri::WebviewWindow) {
+    if window.is_maximized().unwrap_or(false) || window.is_fullscreen().unwrap_or(false) {
+        return;
+    }
+    let Ok(size) = window.inner_size() else { return };
+    let scale = window.scale_factor().unwrap_or(1.0);
+    let width = (size.width as f64 / scale).round() as i64;
+    let height = (size.height as f64 / scale).round() as i64;
+    if width < 360 || height < 480 {
+        return;
+    }
+    let position = window.outer_position().ok().map(|pos| {
+        (
+            (pos.x as f64 / scale).round() as i64,
+            (pos.y as f64 / scale).round() as i64,
+        )
+    });
+    let Some(path) = window_size_file(&window.app_handle()) else { return };
+    if let Some(dir) = path.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    let body = match position {
+        Some((x, y)) => json!({ "x": x, "y": y, "width": width, "height": height }),
+        None => json!({ "width": width, "height": height }),
+    };
+    let _ = std::fs::write(path, body.to_string());
+}
+
+static LAST_SAVE_MS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+fn now_ms() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|elapsed| elapsed.as_millis() as u64)
+        .unwrap_or(0)
+}
+
+/// 拖动 / 缩放过程中顺带存一下，最多每 700ms 写一次盘
+fn save_window_size_throttled(window: &tauri::WebviewWindow) {
+    let now = now_ms();
+    let last = LAST_SAVE_MS.load(std::sync::atomic::Ordering::Relaxed);
+    if now.saturating_sub(last) < 700 {
+        return;
+    }
+    LAST_SAVE_MS.store(now, std::sync::atomic::Ordering::Relaxed);
+    save_window_size(window);
+}
+
+/// 位置是否还落在某块显示器上（至少露出 120×80，避免整窗跑到屏幕外）
+fn position_is_visible(window: &tauri::WebviewWindow, x: i32, y: i32, w: i32, h: i32) -> bool {
+    let Ok(monitors) = window.available_monitors() else { return false };
+    monitors.iter().any(|monitor| {
+        let pos = monitor.position();
+        let size = monitor.size();
+        let monitor_right = pos.x + size.width as i32;
+        let monitor_bottom = pos.y + size.height as i32;
+        x + w > pos.x + 120 && x < monitor_right - 120 && y + h > pos.y + 40 && y < monitor_bottom - 40
+    })
+}
+
+/// 按上次保存的尺寸和位置恢复；数值不合理就当作没有记录
+fn restore_window_size(window: &tauri::WebviewWindow) {
+    let Some(path) = window_size_file(&window.app_handle()) else { return };
+    let Ok(content) = std::fs::read_to_string(path) else { return };
+    let Ok(value) = serde_json::from_str::<Value>(&content) else { return };
+    let width = value.get("width").and_then(Value::as_f64).unwrap_or(0.0);
+    let height = value.get("height").and_then(Value::as_f64).unwrap_or(0.0);
+    if !(360.0..=7680.0).contains(&width) || !(480.0..=4320.0).contains(&height) {
+        return;
+    }
+    let _ = window.set_size(tauri::LogicalSize::new(width, height));
+
+    let (Some(x), Some(y)) = (
+        value.get("x").and_then(Value::as_f64),
+        value.get("y").and_then(Value::as_f64),
+    ) else {
+        return;
+    };
+    if !(-32768.0..=32768.0).contains(&x) || !(-32768.0..=32768.0).contains(&y) {
+        return;
+    }
+    let scale = window.scale_factor().unwrap_or(1.0);
+    let physical_x = (x * scale).round() as i32;
+    let physical_y = (y * scale).round() as i32;
+    let physical_w = (width * scale).round() as i32;
+    let physical_h = (height * scale).round() as i32;
+    if !position_is_visible(&window, physical_x, physical_y, physical_w, physical_h) {
+        return;
+    }
+    let _ = window.set_position(tauri::LogicalPosition::new(x, y));
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {    // GUI 版没有控制台，把 panic 文本落盘，方便事后排查
     std::panic::set_hook(Box::new(|info| {
@@ -521,7 +624,7 @@ pub fn run() {    // GUI 版没有控制台，把 panic 文本落盘，方便事
         eprintln!("{text}");
     }));
 
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         // 全局只保留一个实例：再次双击时把已有窗口唤到前面，然后退出新进程
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
@@ -541,18 +644,33 @@ pub fn run() {    // GUI 版没有控制台，把 panic 文本落盘，方便事
             app_ready
         ])
         .setup(|app| {
-            // 先按上次的主题给窗口上底色（发生在显示之前）
             if let Some(window) = app.get_webview_window("main") {
+                // ① 先恢复上次的窗口尺寸/位置（必须在 show 之前，否则会看到跳变）
+                restore_window_size(&window);
+                // ② 再按上次主题给窗口上底色
                 let theme_id = startup_theme_id(&window);
                 apply_window_theme_color(&window, &theme_id);
-            }
-            // 窗口创建后立刻显示：底色已经按主题设好，页面上还有遮罩盖着，
-            // 不会再出现白屏；也不再需要 app_ready 才显示。
-            if let Some(window) = app.get_webview_window("main") {
+                // ③ 最后显示：底色和几何都已就位，页面还有遮罩盖着
                 let _ = window.show();
             }
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application");
+
+    app.run(|app_handle, event| {
+        if let tauri::RunEvent::WindowEvent { label, event, .. } = &event {
+            if label != "main" {
+                return;
+            }
+            let Some(window) = app_handle.get_webview_window("main") else { return };
+            match event {
+                tauri::WindowEvent::CloseRequested { .. } => save_window_size(&window),
+                tauri::WindowEvent::Resized(_) | tauri::WindowEvent::Moved(_) => {
+                    save_window_size_throttled(&window)
+                }
+                _ => {}
+            }
+        }
+    });
 }
