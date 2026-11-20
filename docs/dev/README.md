@@ -7,6 +7,7 @@
 | 文档 | 内容 |
 |---|---|
 | [启动白屏处理（窗口底色 + 启动遮罩）](./boot-guard.md) | 主题底色、启动遮罩、主题持久化、兜底与实测数据 |
+| [窗口尺寸与位置记忆](./window-geometry.md) | 保存/恢复时机、最大化处理、配置文件格式、诊断日志 |
 | [窗口宽度调试角标（size badge）](./size-badge.md) | 左下角 `宽 × 高` 角标的启用条件、快捷键、样式与常见问题 |
 | [Android 支持方案](./android-plan.md) | 移植 Android 的范围、决策、分阶段实施清单 |
 
@@ -14,16 +15,16 @@
 
 - 涉及「内部开关」的改动，在文档里写清楚三个要素：**默认值**、**怎么打开/关闭**、**关闭后由谁兜底**
 - 开关变量统一用 `FISH_*` 环境变量（构建期）或 `fish-app.*` 开头的 localStorage 键（运行时），与现有 `FISH_DEBUG`、`fish-app.theme` 保持一致
-- 启动链路相关的改动要同时检查 Rust（窗口创建）与前端（遮罩、主题）两侧，避免出现"一侧先就绪、另一侧还空着"的窗口
+- 启动链路相关的改动要同时检查 Rust（窗口创建、几何恢复）与前端（遮罩、主题）两侧，避免出现「一侧先就绪、另一侧还空着」的窗口
 - 代码里给开关写注释，注释中引用本文档路径
 
 ## 现有开关一览
 
 | 开关 | 作用域 | 默认 | 说明 |
 |---|---|---|---|
-| `FISH_DEBUG=1` | 构建期 | 关闭 | 打包宽度调试角标（release 包整段剔除） |
+| `FISH_DEBUG=1` | 构建期 | 关闭 | 打包宽度调试角标（release 剔除）；同时编译进窗口几何诊断日志 |
 | `__APP_VERSION__` | 构建期 | `package.json` 的 version | 标题栏版本号 |
-| `fish-app.theme` | 运行时（localStorage） | 跟随系统 | 主题选择；同时会通过 `save_theme` 命令同步给 Rust 作为窗口底色 |
+| `fish-app.theme` | 运行时（localStorage） | 跟随系统 | 主题选择；同时通过 `save_theme` 同步给 Rust 作为窗口底色 |
 | `fish-app.debug-size` | 运行时（localStorage） | 无记录时显示 | 宽度角标显隐，`'1'` 显示 / `'0'` 隐藏 |
 | `Ctrl+Shift+D` | 运行时 | — | debug 构建里切换宽度角标显示 |
 
@@ -32,3 +33,5 @@
 | 文件 | 位置 | 作用 |
 |---|---|---|
 | `theme.json` | `%APPDATA%\com.local.fish.translate\` | 上次解析后的主题 id，供 Rust 设置窗口底色 |
+| `window-size.json` | `%APPDATA%\com.local.fish.translate\` | 上次的窗口几何（`x/y/width/height/maximized`） |
+| `fish-window.log` | `%TEMP%\` | 仅 debug 构建：窗口几何的保存/恢复日志 |

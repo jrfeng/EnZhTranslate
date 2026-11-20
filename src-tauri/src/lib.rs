@@ -450,6 +450,10 @@ fn app_ready(window: tauri::WebviewWindow) -> Value {
     restore_window_size(&window);
     let _ = window.show();
     restore_window_size(&window);
+    if startup_maximized() {
+        let _ = window.maximize();
+        window_log("restore: maximized");
+    }
     let _ = window.set_focus();
     json!({ "ok": true })
 }
@@ -517,41 +521,16 @@ fn save_theme(window: tauri::WebviewWindow, request: ThemeRequest) -> Value {
 
 // ---------------------------------------------------------------- 窗口几何记忆
 
+/// 诊断日志只在 FISH_DEBUG=1 的构建里编译进去（release 包整体剔除）
+const WINDOW_DEBUG: bool = match option_env!("FISH_DEBUG") {
+    Some(value) => value.len() == 1 && value.as_bytes()[0] == b'1',
+    None => false,
+};
+
 /// 窗口尺寸的保存位置：应用配置目录下的 window-size.json
 fn window_size_file(app: &tauri::AppHandle) -> Option<std::path::PathBuf> {
     app.path().app_config_dir().ok().map(|dir| dir.join("window-size.json"))
 }
-
-/// 关闭窗口前把当前逻辑尺寸和位置写盘；最大化 / 全屏时保留上一次的值
-fn save_window_size(window: &tauri::WebviewWindow) {
-    if window.is_maximized().unwrap_or(false) || window.is_fullscreen().unwrap_or(false) {
-        return;
-    }
-    let Ok(size) = window.inner_size() else { return };
-    let scale = window.scale_factor().unwrap_or(1.0);
-    let width = (size.width as f64 / scale).round() as i64;
-    let height = (size.height as f64 / scale).round() as i64;
-    if width < 360 || height < 480 {
-        return;
-    }
-    let position = window.outer_position().ok().map(|pos| {
-        (
-            (pos.x as f64 / scale).round() as i64,
-            (pos.y as f64 / scale).round() as i64,
-        )
-    });
-    let Some(path) = window_size_file(&window.app_handle()) else { return };
-    if let Some(dir) = path.parent() {
-        let _ = std::fs::create_dir_all(dir);
-    }
-    let body = match position {
-        Some((x, y)) => json!({ "x": x, "y": y, "width": width, "height": height }),
-        None => json!({ "width": width, "height": height }),
-    };
-    let _ = std::fs::write(path, body.to_string());
-}
-
-static LAST_SAVE_MS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
 fn now_ms() -> u64 {
     std::time::SystemTime::now()
@@ -560,15 +539,162 @@ fn now_ms() -> u64 {
         .unwrap_or(0)
 }
 
+/// 写一行窗口日志：控制台 + %TEMP%\fish-window.log，便于事后排查
+fn window_log(message: &str) {
+    if !WINDOW_DEBUG {
+        return;
+    }
+    eprintln!("[window] {message}");
+    let path = std::env::temp_dir().join("fish-window.log");
+    let line = format!("[{}] {message}\n", now_ms());
+    if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
+        use std::io::Write;
+        let _ = file.write_all(line.as_bytes());
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct WindowGeometry {
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+}
+
+#[derive(Clone, Copy)]
+struct SavedState {
+    geometry: WindowGeometry,
+    has_position: bool,
+    maximized: bool,
+}
+
+/// 最后一次"非最大化"的几何：最大化关闭时用它写盘
+static LAST_NORMAL: std::sync::Mutex<Option<WindowGeometry>> = std::sync::Mutex::new(None);
+/// 启动时读到的状态，供 setup / app_ready 复用
+static STARTUP_STATE: std::sync::Mutex<Option<SavedState>> = std::sync::Mutex::new(None);
+
+impl SavedState {
+    fn valid(&self) -> bool {
+        (360..=7680).contains(&self.geometry.width)
+            && (480..=4320).contains(&self.geometry.height)
+            && (-32768..=32768).contains(&self.geometry.x)
+            && (-32768..=32768).contains(&self.geometry.y)
+    }
+}
+
+fn current_geometry(window: &tauri::WebviewWindow) -> Option<WindowGeometry> {
+    let size = window.inner_size().ok()?;
+    let position = window.outer_position().ok()?;
+    let scale = window.scale_factor().unwrap_or(1.0);
+    Some(WindowGeometry {
+        x: (position.x as f64 / scale).round() as i32,
+        y: (position.y as f64 / scale).round() as i32,
+        width: (size.width as f64 / scale).round() as i32,
+        height: (size.height as f64 / scale).round() as i32,
+    })
+}
+
+fn update_last_normal(window: &tauri::WebviewWindow) {
+    let Some(geometry) = current_geometry(window) else { return };
+    if geometry.width < 360 || geometry.height < 480 {
+        return;
+    }
+    if let Ok(mut slot) = LAST_NORMAL.lock() {
+        *slot = Some(geometry);
+    }
+}
+
+fn last_normal() -> Option<WindowGeometry> {
+    LAST_NORMAL.lock().ok().and_then(|slot| *slot)
+}
+
+fn read_saved_state(window: &tauri::WebviewWindow) -> Option<SavedState> {
+    let path = window_size_file(&window.app_handle())?;
+    let content = std::fs::read_to_string(path).ok()?;
+    let value = serde_json::from_str::<Value>(&content).ok()?;
+    let width = value.get("width").and_then(Value::as_i64).unwrap_or(0) as i32;
+    let height = value.get("height").and_then(Value::as_i64).unwrap_or(0) as i32;
+    let x = value.get("x").and_then(Value::as_i64).map(|v| v as i32);
+    let y = value.get("y").and_then(Value::as_i64).map(|v| v as i32);
+    let maximized = value.get("maximized").and_then(Value::as_bool).unwrap_or(false);
+    let (x, y, has_position) = match (x, y) {
+        (Some(x), Some(y)) => (x, y, true),
+        _ => (0, 0, false),
+    };
+    let state = SavedState {
+        geometry: WindowGeometry { x, y, width, height },
+        has_position,
+        maximized,
+    };
+    state.valid().then_some(state)
+}
+
+fn write_saved_state(window: &tauri::WebviewWindow, state: SavedState) {
+    let Some(path) = window_size_file(&window.app_handle()) else { return };
+    if let Some(dir) = path.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    let geometry = state.geometry;
+    let mut body = json!({
+        "version": 1,
+        "width": geometry.width,
+        "height": geometry.height,
+        "maximized": state.maximized,
+    });
+    if state.has_position {
+        body["x"] = json!(geometry.x);
+        body["y"] = json!(geometry.y);
+    }
+    let _ = std::fs::write(path, body.to_string());
+    window_log(&format!(
+        "save {}x{} @ {},{} maximized={}",
+        geometry.width, geometry.height, geometry.x, geometry.y, state.maximized
+    ));
+}
+
+/// 保存窗口尺寸/位置。最大化时用最后一次非最大化几何，避免把屏幕尺寸存进去
+fn save_window_size(window: &tauri::WebviewWindow, reason: &str) {
+    if window.is_fullscreen().unwrap_or(false) {
+        window_log(&format!("skip save ({reason}): fullscreen"));
+        return;
+    }
+    let maximized = window.is_maximized().unwrap_or(false);
+    if !maximized {
+        update_last_normal(window);
+    }
+    let geometry = if maximized {
+        match last_normal().or_else(|| read_saved_state(window).map(|state| state.geometry)) {
+            Some(geometry) => geometry,
+            None => return,
+        }
+    } else {
+        match current_geometry(window) {
+            Some(geometry) => geometry,
+            None => return,
+        }
+    };
+    let state = SavedState { geometry, has_position: true, maximized };
+    if !state.valid() {
+        window_log(&format!("skip save ({reason}): invalid geometry"));
+        return;
+    }
+    write_saved_state(window, state);
+}
+
+static LAST_SAVE_MS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
 /// 拖动 / 缩放过程中顺带存一下，最多每 700ms 写一次盘
 fn save_window_size_throttled(window: &tauri::WebviewWindow) {
+    if window.is_fullscreen().unwrap_or(false) {
+        return;
+    }
     let now = now_ms();
     let last = LAST_SAVE_MS.load(std::sync::atomic::Ordering::Relaxed);
     if now.saturating_sub(last) < 700 {
         return;
     }
     LAST_SAVE_MS.store(now, std::sync::atomic::Ordering::Relaxed);
-    save_window_size(window);
+    save_window_size(window, "resize/move");
 }
 
 /// 位置是否还落在某块显示器上（至少露出 120×80，避免整窗跑到屏幕外）
@@ -585,34 +711,46 @@ fn position_is_visible(window: &tauri::WebviewWindow, x: i32, y: i32, w: i32, h:
 
 /// 按上次保存的尺寸和位置恢复；数值不合理就当作没有记录
 fn restore_window_size(window: &tauri::WebviewWindow) {
-    let Some(path) = window_size_file(&window.app_handle()) else { return };
-    let Ok(content) = std::fs::read_to_string(path) else { return };
-    let Ok(value) = serde_json::from_str::<Value>(&content) else { return };
-    let width = value.get("width").and_then(Value::as_f64).unwrap_or(0.0);
-    let height = value.get("height").and_then(Value::as_f64).unwrap_or(0.0);
-    if !(360.0..=7680.0).contains(&width) || !(480.0..=4320.0).contains(&height) {
-        return;
-    }
-    let _ = window.set_size(tauri::LogicalSize::new(width, height));
-
-    let (Some(x), Some(y)) = (
-        value.get("x").and_then(Value::as_f64),
-        value.get("y").and_then(Value::as_f64),
-    ) else {
+    let Some(state) = read_saved_state(window) else {
+        window_log("restore: no valid saved state");
         return;
     };
-    if !(-32768.0..=32768.0).contains(&x) || !(-32768.0..=32768.0).contains(&y) {
-        return;
+    let geometry = state.geometry;
+    let _ = window.set_size(tauri::LogicalSize::new(geometry.width as f64, geometry.height as f64));
+
+    if state.has_position {
+        let scale = window.scale_factor().unwrap_or(1.0);
+        let physical_x = (geometry.x as f64 * scale).round() as i32;
+        let physical_y = (geometry.y as f64 * scale).round() as i32;
+        let physical_w = (geometry.width as f64 * scale).round() as i32;
+        let physical_h = (geometry.height as f64 * scale).round() as i32;
+        if position_is_visible(window, physical_x, physical_y, physical_w, physical_h) {
+            let _ = window.set_position(tauri::LogicalPosition::new(geometry.x as f64, geometry.y as f64));
+        } else {
+            window_log(&format!(
+                "restore: position {physical_x},{physical_y} off-screen, keep default"
+            ));
+        }
     }
-    let scale = window.scale_factor().unwrap_or(1.0);
-    let physical_x = (x * scale).round() as i32;
-    let physical_y = (y * scale).round() as i32;
-    let physical_w = (width * scale).round() as i32;
-    let physical_h = (height * scale).round() as i32;
-    if !position_is_visible(&window, physical_x, physical_y, physical_w, physical_h) {
-        return;
+
+    if let Ok(mut slot) = LAST_NORMAL.lock() {
+        *slot = Some(geometry);
     }
-    let _ = window.set_position(tauri::LogicalPosition::new(x, y));
+    if let Ok(mut slot) = STARTUP_STATE.lock() {
+        *slot = Some(state);
+    }
+    window_log(&format!(
+        "restore {}x{} @ {},{} maximized={}",
+        geometry.width, geometry.height, geometry.x, geometry.y, state.maximized
+    ));
+}
+
+fn startup_maximized() -> bool {
+    STARTUP_STATE
+        .lock()
+        .ok()
+        .and_then(|slot| slot.map(|state| state.maximized))
+        .unwrap_or(false)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -650,7 +788,11 @@ pub fn run() {    // GUI 版没有控制台，把 panic 文本落盘，方便事
                 // ② 再按上次主题给窗口上底色
                 let theme_id = startup_theme_id(&window);
                 apply_window_theme_color(&window, &theme_id);
-                // ③ 最后显示：底色和几何都已就位，页面还有遮罩盖着
+                // ③ 上次是最大化的话，显示前就最大化，避免先闪一帧普通尺寸
+                if startup_maximized() {
+                    let _ = window.maximize();
+                }
+                // ④ 最后显示：底色和几何都已就位，页面还有遮罩盖着
                 let _ = window.show();
             }
             Ok(())
@@ -659,18 +801,24 @@ pub fn run() {    // GUI 版没有控制台，把 panic 文本落盘，方便事
         .expect("error while building tauri application");
 
     app.run(|app_handle, event| {
-        if let tauri::RunEvent::WindowEvent { label, event, .. } = &event {
-            if label != "main" {
-                return;
-            }
-            let Some(window) = app_handle.get_webview_window("main") else { return };
-            match event {
-                tauri::WindowEvent::CloseRequested { .. } => save_window_size(&window),
-                tauri::WindowEvent::Resized(_) | tauri::WindowEvent::Moved(_) => {
-                    save_window_size_throttled(&window)
+        match &event {
+            tauri::RunEvent::WindowEvent { label, event, .. } if label == "main" => {
+                let Some(window) = app_handle.get_webview_window("main") else { return };
+                match event {
+                    tauri::WindowEvent::CloseRequested { .. } => save_window_size(&window, "close"),
+                    tauri::WindowEvent::Resized(_) | tauri::WindowEvent::Moved(_) => {
+                        save_window_size_throttled(&window)
+                    }
+                    _ => {}
                 }
-                _ => {}
             }
+            // 有些关闭路径不会触发 CloseRequested，退出前再存一次
+            tauri::RunEvent::Exit => {
+                if let Some(window) = app_handle.get_webview_window("main") {
+                    save_window_size(&window, "exit");
+                }
+            }
+            _ => {}
         }
     });
 }
