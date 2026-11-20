@@ -728,6 +728,24 @@ fn position_is_visible(window: &tauri::WebviewWindow, x: i32, y: i32, w: i32, h:
     })
 }
 
+/// 把「客户区最小尺寸」换算成窗口最小尺寸后设置。
+/// 直接用 tauri.conf 的 minWidth 会被 Windows 当成外框尺寸，
+/// 无边框窗口还带 ~14px 的隐形边框，导致实际 innerWidth 比 360 小。
+fn apply_min_inner_size(window: &tauri::WebviewWindow, min_width: f64, min_height: f64) {
+    let scale = window.scale_factor().unwrap_or(1.0);
+    let (Ok(outer), Ok(inner)) = (window.outer_size(), window.inner_size()) else { return };
+    let border_width = outer.width.saturating_sub(inner.width) as f64 / scale;
+    let border_height = outer.height.saturating_sub(inner.height) as f64 / scale;
+    let _ = window.set_min_size(Some(tauri::LogicalSize::new(
+        min_width + border_width,
+        min_height + border_height,
+    )));
+    window_log(&format!(
+        "min inner size {}x{} (border {}x{})",
+        min_width, min_height, border_width, border_height
+    ));
+}
+
 /// 按上次保存的尺寸和位置恢复；数值不合理就当作没有记录
 fn restore_window_size(window: &tauri::WebviewWindow) {
     let Some(state) = read_saved_state(window) else {
@@ -793,6 +811,8 @@ pub fn run() {    // GUI 版没有控制台，把 panic 文本落盘，方便事
             if let Some(window) = app.get_webview_window("main") {
                 // ① 先恢复上次的窗口尺寸/位置（必须在 show 之前，否则会看到跳变）
                 restore_window_size(&window);
+                // ①.5 客户区最小尺寸按 360×480 钉死（含隐形边框的补偿）
+                apply_min_inner_size(&window, 360.0, 480.0);
                 // ② 再按上次主题给窗口上底色
                 let theme_id = startup_theme_id(&window);
                 apply_window_theme_color(&window, &theme_id);

@@ -49,6 +49,32 @@ restore_window_size(&window);   // show 后：压掉 WebView2 首帧的重算
 | `Resized` / `Moved` | 节流 700ms，防止强杀丢失 |
 | `RunEvent::Exit` | 有些关闭路径不触发窗口事件，退出前补一次 |
 
+## 最小窗口尺寸
+
+`tauri.conf.json` 里**不再**配置 `minWidth` / `minHeight`，改成运行时按客户区计算：
+
+```rust
+// lib.rs · setup
+apply_min_inner_size(&window, 360.0, 480.0);
+```
+
+原因：`tauri.conf.json` 的 `minWidth` 在 Windows 上被当成**外框尺寸**，而 `decorations: false` 的窗口仍有约 15px 宽的隐形拖拽边框，于是：
+
+```
+minWidth = 360  →  外框 360  →  客户区只有 ~345
+```
+
+界面按客户区宽度做媒体查询，用户拖到最窄时角标显示 `346` 而不是 `360`，与断点设计不符。
+
+现在的做法是先量一次「外框与客户区的差值」，再加到目标客户区尺寸上：
+
+```rust
+let border = (outer.width - inner.width) / scale;   // 实测约 15px
+window.set_min_size(LogicalSize::new(360 + border, 480 + border));
+```
+
+这样无论 DPI 缩放和窗口样式如何，**客户区最小宽度恒为 360**。
+
 ## 配置文件格式
 
 ```json
