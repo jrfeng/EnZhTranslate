@@ -1735,9 +1735,13 @@ function buildContextItems(region, event) {
   return []
 }
 
+let ctxIdleTimer = 0
+
 function hideContextMenu() {
   if (el['ctx-menu'] === null || el['ctx-menu'] === undefined) return
   el['ctx-menu'].hidden = true
+  el['ctx-menu'].classList.remove('ctx-idle')
+  window.clearTimeout(ctxIdleTimer)
 }
 
 function isContextMenuOpen() {
@@ -1780,8 +1784,26 @@ function showContextMenu(items, x, y) {
   menu.style.top = top + 'px'
 
   // preventScroll：聚焦菜单项时不要让页面滚动，否则会触发 scroll 监听把菜单关掉
-  const first = menu.querySelector('.ctx-item:not(:disabled)')
-  if (first !== null) first.focus({ preventScroll: true })
+  menu.tabIndex = -1
+
+  // 刚弹出来时先不响应 hover / focus-visible：
+  // 鼠标本来就在右键位置，菜单可能正好展开在指针下面；
+  // 焦点落在第一项上时浏览器还会按上一次输入方式判断 focus-visible，
+  // 表现为「没动鼠标却有一项高亮」。
+  menu.classList.add('ctx-idle')
+  window.clearTimeout(ctxIdleTimer)
+  ctxIdleTimer = window.setTimeout(() => menu.classList.remove('ctx-idle'), 600)
+
+  const releaseIdle = (event) => {
+    if (Math.abs(event.clientX - x) < 2 && Math.abs(event.clientY - y) < 2) return
+    menu.classList.remove('ctx-idle')
+    window.clearTimeout(ctxIdleTimer)
+    document.removeEventListener('pointermove', releaseIdle, true)
+  }
+  document.addEventListener('pointermove', releaseIdle, true)
+
+  // preventScroll：聚焦菜单容器时不要让页面滚动，否则会触发 scroll 事件把菜单关掉
+  menu.focus({ preventScroll: true })
 }
 
 function handleContextMenuKeydown(event) {
