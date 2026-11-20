@@ -1,121 +1,132 @@
-# 防白屏机制（boot guard）
+# 启动白屏处理（窗口底色 + 启动遮罩）
 
 > 最后更新：2026-11-20
-> 相关代码：`src/boot-head.js`、`src/boot-body.js`、`src/main.js`、`src/app.css`、`src-tauri/src/lib.rs`、`scripts/build.mjs`
+> 相关代码：`src-tauri/src/lib.rs`、`src/index.html`、`src/app.css`、`src/main.js`、`src/boot-head.js`、`src/boot-body.js`
 
-## 一套机制，四道保险
+## 目标
 
-窗口在 `tauri.conf.json` 里是 `visible: false`。从进程启动到界面可用这几百毫秒里，如果不做处理，用户可能看到：
+从进程启动到界面可用的这几百毫秒里，用户不应该看到：
 
-- 一块白底窗口（WebView2 还没画出内容）
-- 未应用主题的界面（浅色闪一下再变深色）
-- Web Awesome 组件升级到一半的错乱排版
+- 一块白色窗口（WebView2 还没画出内容）
+- 深色模式下闪一下浅色
+- 浅色模式下闪一下深色
+- 组件升级到一半的错乱排版
 
-所以整套「防白屏」由四个动作组成，它们**必须一起开、一起关**：
-
-| # | 机制 | 实现位置 | 作用 |
-|---|---|---|---|
-| ① | **窗口不可见** | `tauri.conf.json` `"visible": false` + `lib.rs` 的 `setup`/`app_ready` | 界面没准备好之前，窗口根本不出现 |
-| ② | **主题先行** | `boot-head.js`（`<head>` 里同步执行） | 首帧之前把 `data-theme` 写到 `<html>`，深色模式下不会闪白 |
-| ③ | **内容隐藏** | `app.css` 的 `html[data-boot-guard='1']:not(.app-ready) .app` | 组件升级完成前不显示内容，避免错乱排版 |
-| ④ | **首屏兜底延时** | `boot-body.js` 的 1.5s / 2s 定时器 | 组件升级卡死时强行放出界面和窗口 |
-
-## 总开关
-
-**构建期**，由 `FISH_BOOT_GUARD` 环境变量控制，默认关闭：
-
-```bash
-# 打开全部四道保险
-FISH_BOOT_GUARD=1 npm run build
-npx tauri build --no-bundle        # 同一个环境变量会传给 cargo
-
-# 默认：全部关闭（启动最快，但可能看到白闪/排版跳一下）
-npm run build && npx tauri build --no-bundle
-```
-
-注入链路（一个变量，两处注入）：
+## 现在的做法：一层底色 + 一层遮罩
 
 ```
-FISH_BOOT_GUARD=1
-   ├── scripts/build.mjs → dist/boot-head.js 里 BOOT_GUARD_DEFAULT = true
-   │     → boot-head 写 document.documentElement.dataset.bootGuard = '1'
-   │       → ② 主题先行生效
-   │       → ③ CSS 选择器命中，内容隐藏
-   │       → boot-body 读到 dataset，④ 定时器生效
-   └── cargo 编译期 option_env!("FISH_BOOT_GUARD") → lib.rs 的 BOOT_GUARD_ENABLED
-         → ① 窗口保持隐藏，等 app_ready
+┌────────────────────────────────────────────┐
+│ Rust：按上次主题设置窗口背景色（WebView 绘制前就生效）│  ← 底色
+│ ┌────────────────────────────────────────┐ │
+│ │ HTML：全屏 .boot-cover（颜色 = --app-bg） │ │  ← 遮罩
+│ │   app.js 渲染完成后淡出并移除             │ │
+│ └────────────────────────────────────────┘ │
+└────────────────────────────────────────────┘
 ```
 
-> 早期版本还有一个运行时开关 `localStorage['fish-app.boot-guard']`，它只能影响前端，Rust 侧读不到，会造成「四道保险状态不一致」。现已移除，只保留构建期开关。
+### ① 窗口底色（Rust）
 
-## 开关状态下的行为对比
+```rust
+// lib.rs · setup
+let theme_id = startup_theme_id(&window);     // 上次保存的主题，没有就跟随系统
+apply_window_theme_color(&window, &theme_id); // set_background_color(...)
+let _ = window.show();                        // 立刻显示，不等前端
+```
 
-### 打开（`FISH_BOOT_GUARD=1`）
+- 主题 id → RGB 的映射与 `app.css` 的 `--app-bg` 一一对应（`theme_background`）
+- 用 Tauri 的 `window.set_background_color()`（底层是 WebView2 的 `DefaultBackgroundColor`），在 WebView 画出第一帧之前就决定底色
+- 窗口**不再等 `app_ready`**，创建完直接显示——因为底色已经是对的，不会白
 
-| 时刻 | 发生什么 |
+### ② 主题持久化（左右两端共享）
+
+窗口底色必须在窗口创建时就能确定，而主题存在 localStorage 里（Rust 读不到），所以另存一份：
+
+```
+%APPDATA%\com.local.fish.translate\theme.json     ← 内容就是 a / b / c / d
+```
+
+| 时机 | 行为 |
 |---|---|
-| 启动 | 窗口隐藏（①） |
-| `<head>` 执行 | 立即写入 `data-theme`（②），深色模式首帧就是深色 |
-| 组件升级前 | `.app` 不可见（③），用户看不到错乱排版 |
-| 组件升级完成 + 一帧 | `main.js` 加 `app-ready`，内容显示 |
-| `app.js` 执行完 | `main.js` 调 `app_ready` → 窗口显示 |
-| 组件卡死 | 1.5s 强制加 `app-ready`，2s 强制显示窗口（④） |
+| 启动 | Rust 读 `theme.json`；文件不存在则用系统深浅色（`window.theme()`） |
+| 前端应用主题 | `applyTheme()` 里调用 `save_theme` 命令，写入解析后的 id，并更新窗口底色 |
 
-实测主窗口可见耗时：**约 330–500 ms**
+前端传的是**解析后**的值（`auto` → `a`/`b`），所以系统切深色时文件也会同步。
 
-### 关闭（默认）
+### ③ 启动遮罩（前端）
 
-| 时刻 | 发生什么 |
+```html
+<!-- index.html，紧跟 <body> -->
+<div class="boot-cover" id="boot-cover" aria-hidden="true"></div>
+```
+
+```css
+.boot-cover {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;                 /* 高于所有弹窗，低于 fatal-error 条 */
+  background: var(--app-bg, #0d0d10);
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+.boot-cover.is-hidden { opacity: 0; }
+```
+
+- 颜色来自 `--app-bg`，而 `data-theme` 由 `boot-head.js` 在 `<head>` 里同步写入，所以**遮罩的第一帧就是正确颜色**
+- 移除时机：`main.js` 里 `app.js` 渲染完成之后，**双 `requestAnimationFrame`** 再淡出（保证这一帧已经进了合成层）
+- `app.js` 抛错也要撤：`try/finally` 包住 `import`
+
+### ④ 兜底
+
+| 场景 | 兜底 |
 |---|---|
-| 窗口创建后 | `lib.rs` 的 `setup` 立刻 `window.show()`（① 关闭） |
-| `<head>` | 不写 `data-theme`（② 关闭），主题等 `app.js` 启动后再设 |
-| 全程 | `.app` 一直可见（③ 关闭），组件升级过程可能看到排版跳动 |
-| 不存在定时器 | ④ 关闭 |
+| `app.js` 抛错 | `main.js` 的 `finally` 撤掉遮罩 |
+| `app.js` 卡住（组件升级死锁） | `boot-body.js` 里 4 秒后强制移除遮罩并放行界面 |
+| 主题文件损坏 / 不存在 | 跟随系统深浅色 |
 
-实测主窗口可见耗时：**约 225–405 ms**（比开启态快 100 ms 左右）
+## 为什么删掉了旧的 `FISH_BOOT_GUARD`
 
-### 关闭后的代价
+旧方案是「窗口隐藏 + 等 `app_ready` + 内容隐藏 + 1.5s/2s 兜底延时」四件套，用一个构建开关整体开关。问题是：
 
-- 深色模式下可能出现**一次白闪**（窗口先出现，主题还没设）
-- 组件升级过程中可能看到工具栏**排版的瞬间跳动**
+- 它把「窗口等待」和「主题兜底」捆在一起，关掉开关会连主题一起丢，直接白屏
+- 窗口要等前端就绪才显示，启动感知上慢 100–160ms
 
-这两点就是关闭四道保险换来的启动速度，属于预期行为。
+新方案把两件事拆开了：
 
-## 各层为什么"必须一起"
+- **底色**由 Rust 在窗口创建时决定 → 窗口可以立刻显示
+- **内容**由遮罩负责 → 组件没升级完也不会露出来
 
-| 只关一部分会怎样 | 结果 |
+所以不再需要那个开关，`FISH_BOOT_GUARD`、`data-boot-guard`、1.5s/2s 定时器全部移除。
+
+## 实测（本机，Windows 150% 缩放）
+
+启动时序：
+
+| 时刻 | 事件 |
 |---|---|
-| ① 开、② 关 | 窗口隐藏到就绪，但内容里是浅色 → 显示瞬间闪白 |
-| ① 关、② 开 | 窗口立刻出现，但 `.app` 隐藏 → 用户看到一块空的主题色窗口 |
-| ①③ 开、② 关 | 就绪后窗口出现，但主题是事后补的 → 可能闪一下 |
-| ③ 关、① 开 | 窗口虽隐藏，但组件升级的半成品已经在渲染，就绪后内容会跳 |
+| ~90 ms | `boot-head.js` 写入 `data-theme` |
+| ~250 ms | Rust 设好底色并 `window.show()`，遮罩已经盖住整窗 |
+| ~350 ms | 组件升级完成，`app.js` 开始渲染 |
+| ~450 ms | 遮罩淡出，界面可用 |
 
-所以四者是一个原子组合，代码上也用同一个 `data-boot-guard` 标记驱动。
+不同主题下窗口中部像素采样（可见后 120ms）：
 
-## 排查白屏时怎么用
+| theme.json | 采样颜色 | 对应 |
+|---|---|---|
+| `b` 浅色 | rgb(223,235,251) | 浅色底 |
+| `a` 深色 | rgb(13,13,16) | `#0d0d10` |
+| `d` 蓝鱼 | rgb(221,234,251) | `#dce9fb` |
 
-1. 先确认构建时是否带了 `FISH_BOOT_GUARD=1`：
+浅色主题不再出现深色底板，深色主题也不会闪白。
 
-   ```bash
-   Select-String -Path dist/boot-head.js -Pattern 'BOOT_GUARD_DEFAULT'
-   ```
+## 已知局限
 
-2. 运行时检查（DevTools 控制台）：
-
-   ```js
-   document.documentElement.dataset.bootGuard   // '1' 开 / '0' 关
-   document.documentElement.dataset.theme        // 'a' / 'b' / 'c' / 'd'（关闭状态下可能为空）
-   document.documentElement.classList.contains('app-ready')
-   ```
-
-3. 如果打开四道保险后仍然白屏，说明问题不在启动时序，而在更底层：
-   - `boot-head.js` 没被加载（检查 `dist/` 里是否缺文件、CSP 是否拦截）
-   - 主题 CSS 没加载（`--app-bg` 缺省时 `body` 背景透明，画布会回退白色）
-   - 详见 `docs/dev/` 下关于主题兜底的说明
+1. **窗口出现后的第一帧（约 10ms）** 可能还是"未合成"状态，截图会捕到桌面内容。这是 DWM 的合成时机，应用层无法控制
+2. **主题切换瞬间**：`save_theme` 会立刻更新窗口底色，页面内已无遮罩，极端情况下可能看到一帧色差（正常主题切换时被 `.boot-cover` 之外的重绘掩盖）
+3. 遮罩本身也是 WebView 画的：如果渲染进程崩溃，遮罩和界面会一起消失
 
 ## 改动时的注意事项
 
-1. `var BOOT_GUARD_DEFAULT = false` 这一行是**构建脚本做文本替换的锚点**，改名要同步改 `scripts/build.mjs`
-2. Rust 侧的 `BOOT_GUARD_ENABLED` 用 `option_env!` 读取，cargo 会因环境变量变化自动重编译；如果发现没生效，先 `cargo clean -p fish-translate` 再构建
-3. 不要单独关闭其中一层——要么四层全开，要么全关
-4. 如果将来把窗口改成默认可见（`visible: true`），① 就失去意义，需要重新设计这套时序
+1. `theme_background()` 里的颜色必须与 `app.css` 中对应主题的 `--app-bg` 保持一致，改主题色时两边都要改
+2. `.boot-cover` 的 `z-index` 要高于所有弹窗层级（当前弹窗最高 1200），低于 `fatal-error`（9999）
+3. 遮罩的移除只能在 `app.js` 渲染之后，提前移除会露出未升级组件的排版
+4. 如果将来新增主题，`save_theme` 的白名单、`theme_background()`、`boot-head.js` 的主题校验三处都要加

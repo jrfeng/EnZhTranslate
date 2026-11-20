@@ -512,14 +512,6 @@ fn save_theme(window: tauri::WebviewWindow, request: ThemeRequest) -> Value {
     json!({ "ok": true })
 }
 
-/// 防白屏机制总开关（窗口隐藏 / 主题先行 / 内容隐藏 / 首屏兜底延时）。
-/// 构建时 `FISH_BOOT_GUARD=1` 打开；默认关闭，窗口创建后立即显示。
-/// 与前端 `boot-head.js` 里的 `BOOT_GUARD_DEFAULT` 由同一个环境变量注入。
-const BOOT_GUARD_ENABLED: bool = match option_env!("FISH_BOOT_GUARD") {
-    Some(value) => value.len() == 1 && value.as_bytes()[0] == b'1',
-    None => false,
-};
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {    // GUI 版没有控制台，把 panic 文本落盘，方便事后排查
     std::panic::set_hook(Box::new(|info| {
@@ -554,20 +546,11 @@ pub fn run() {    // GUI 版没有控制台，把 panic 文本落盘，方便事
                 let theme_id = startup_theme_id(&window);
                 apply_window_theme_color(&window, &theme_id);
             }
-            // 关闭防白屏机制时，窗口不等 app_ready，创建完就显示（可能闪一下白）
-            if !BOOT_GUARD_ENABLED {
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.show();
-                }
+            // 窗口创建后立刻显示：底色已经按主题设好，页面上还有遮罩盖着，
+            // 不会再出现白屏；也不再需要 app_ready 才显示。
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
             }
-            // 兜底：前端万一没跑起来也别留一个看不见的进程
-            let handle = app.handle().clone();
-            std::thread::spawn(move || {
-                std::thread::sleep(std::time::Duration::from_secs(4));
-                if let Some(window) = handle.get_webview_window("main") {
-                    let _ = window.show();
-                }
-            });
             Ok(())
         })
         .run(tauri::generate_context!())

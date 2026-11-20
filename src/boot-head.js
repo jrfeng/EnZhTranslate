@@ -6,14 +6,7 @@
  * 单独成文件（而不是内联）是为了能开严格的 CSP：script-src 'self'。
  */
 ;(function () {
-  /* 防白屏机制总开关（构建时由 scripts/build.mjs 替换）：打开后才有
-     「主题先行 + 内容隐藏 + 首屏兜底延时」，Rust 侧窗口也保持隐藏到 app_ready。
-     默认关闭，FISH_BOOT_GUARD=1 构建打开。 */
-  var BOOT_GUARD_DEFAULT = false
-  var bootGuard = BOOT_GUARD_DEFAULT
-  document.documentElement.dataset.bootGuard = bootGuard ? '1' : '0'
-
-  // 实验：主题永远在首帧之前设好（遮罩颜色依赖 --app-bg）
+  // 主题在首帧之前设好：窗口底色与启动遮罩都依赖它，不能等 app.js
   try {
     var saved = localStorage.getItem('fish-app.theme')
     var id = saved === 'a' || saved === 'b' || saved === 'c' || saved === 'd' ? saved : null

@@ -317,11 +317,6 @@ html {
   opacity: 0;
 }
 
-/* 内容隐藏只在防白屏机制打开时生效（data-boot-guard='1'），
-   关闭时界面立即可见，接受组件升级过程的排版闪动 */
-html[data-boot-guard='1']:not(.app-ready) .app {
-  visibility: hidden;
-}
 
 body {
   background: var(--app-bg);
