@@ -42,23 +42,11 @@
     /* 配置读不出来就当作没有余额 */
   }
 
-  /* 首屏兜底延时：组件升级卡住时提前放出界面，避免一直黑屏/白屏。
-     跟随构建时的 FISH_BOOT_GUARD 总开关（boot-head.js 已把结果写到 data-boot-guard）。 */
-  var bootGuard = document.documentElement.dataset.bootGuard === '1'
-
-  if (bootGuard) {
-    setTimeout(function () {
-      document.documentElement.classList.add('app-ready')
-    }, 1500)
-
-    /* 兜底：万一 app.js 没跑起来，窗口默认是隐藏的（防白闪），这里强制放出来，
-       否则用户会看到一个「什么都不发生」的进程 */
-    setTimeout(function () {
-      try {
-        window.__TAURI__.core.invoke('app_ready')
-      } catch (error) {
-        /* 不是 Tauri 环境（浏览器里调试）就算了 */
-      }
-    }, 2000)
-  }
+  /* 兜底：万一 app.js 卡住没跑起来，遮罩不会自己消失。
+     4 秒后强制撤掉遮罩并放行界面，避免用户一直盯着一块纯色窗口。 */
+  setTimeout(function () {
+    var cover = document.getElementById('boot-cover')
+    if (cover) cover.remove()
+    document.documentElement.classList.add('app-ready')
+  }, 4000)
 })()

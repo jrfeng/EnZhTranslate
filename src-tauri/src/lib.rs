@@ -451,13 +451,66 @@ fn app_ready(window: tauri::Window) -> Value {
     json!({ "ok": true })
 }
 
-/// 防白屏机制总开关（窗口隐藏 / 主题先行 / 内容隐藏 / 首屏兜底延时）。
-/// 构建时 `FISH_BOOT_GUARD=1` 打开；默认关闭，窗口创建后立即显示。
-/// 与前端 `boot-head.js` 里的 `BOOT_GUARD_DEFAULT` 由同一个环境变量注入。
-const BOOT_GUARD_ENABLED: bool = match option_env!("FISH_BOOT_GUARD") {
-    Some(value) => value.len() == 1 && value.as_bytes()[0] == b'1',
-    None => false,
-};
+#[derive(Deserialize)]
+struct ThemeRequest {
+    theme: String,
+}
+
+const THEME_FILE_NAME: &str = "theme.json";
+
+/// 主题 id 对应的页面底色（与 app.css 里 --app-bg 保持一致）
+fn theme_background(id: &str) -> (u8, u8, u8) {
+    match id {
+        "a" => (0x0d, 0x0d, 0x10),
+        "c" => (0xfd, 0xfa, 0xf2),
+        "d" => (0xdc, 0xe9, 0xfb),
+        _ => (0xf2, 0xf2, 0xf5),
+    }
+}
+
+fn theme_file(app: &tauri::AppHandle) -> Option<std::path::PathBuf> {
+    app.path().app_config_dir().ok().map(|dir| dir.join(THEME_FILE_NAME))
+}
+
+fn saved_theme_id(app: &tauri::AppHandle) -> Option<String> {
+    let path = theme_file(app)?;
+    let id = std::fs::read_to_string(path).ok()?.trim().to_string();
+    matches!(id.as_str(), "a" | "b" | "c" | "d").then_some(id)
+}
+
+/// 启动时用哪个主题给窗口上底色：优先用上次保存的主题，没有就跟随系统
+fn startup_theme_id(window: &tauri::WebviewWindow) -> String {
+    if let Some(id) = saved_theme_id(&window.app_handle()) {
+        return id;
+    }
+    match window.theme() {
+        Ok(tauri::Theme::Dark) => "a".to_string(),
+        _ => "b".to_string(),
+    }
+}
+
+fn apply_window_theme_color(window: &tauri::WebviewWindow, id: &str) {
+    let (red, green, blue) = theme_background(id);
+    // 让 WebView 首帧之前的底色就是主题色，避免浅色用户看到深色/白色底板
+    let _ = window.set_background_color(Some(tauri::window::Color(red, green, blue, 255)));
+}
+
+/// 前端切换主题时调用：落盘 + 立刻更新窗口底色
+#[tauri::command]
+fn save_theme(window: tauri::WebviewWindow, request: ThemeRequest) -> Value {
+    let id = match request.theme.as_str() {
+        "a" | "b" | "c" | "d" => request.theme,
+        _ => "b".to_string(),
+    };
+    if let Some(path) = theme_file(&window.app_handle()) {
+        if let Some(dir) = path.parent() {
+            let _ = std::fs::create_dir_all(dir);
+        }
+        let _ = std::fs::write(path, &id);
+    }
+    apply_window_theme_color(&window, &id);
+    json!({ "ok": true })
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {    // GUI 版没有控制台，把 panic 文本落盘，方便事后排查
@@ -484,23 +537,20 @@ pub fn run() {    // GUI 版没有控制台，把 panic 文本落盘，方便事
             ocr,
             clipboard_read,
             clipboard_write,
+            save_theme,
             app_ready
         ])
         .setup(|app| {
-            // 关闭防白屏机制时，窗口不等 app_ready，创建完就显示（可能闪一下白）
-            if !BOOT_GUARD_ENABLED {
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.show();
-                }
+            // 先按上次的主题给窗口上底色（发生在显示之前）
+            if let Some(window) = app.get_webview_window("main") {
+                let theme_id = startup_theme_id(&window);
+                apply_window_theme_color(&window, &theme_id);
             }
-            // 兜底：前端万一没跑起来也别留一个看不见的进程
-            let handle = app.handle().clone();
-            std::thread::spawn(move || {
-                std::thread::sleep(std::time::Duration::from_secs(4));
-                if let Some(window) = handle.get_webview_window("main") {
-                    let _ = window.show();
-                }
-            });
+            // 窗口创建后立刻显示：底色已经按主题设好，页面上还有遮罩盖着，
+            // 不会再出现白屏；也不再需要 app_ready 才显示。
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+            }
             Ok(())
         })
         .run(tauri::generate_context!())

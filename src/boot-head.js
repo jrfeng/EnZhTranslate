@@ -6,23 +6,14 @@
  * 单独成文件（而不是内联）是为了能开严格的 CSP：script-src 'self'。
  */
 ;(function () {
-  /* 防白屏机制总开关（构建时由 scripts/build.mjs 替换）：打开后才有
-     「主题先行 + 内容隐藏 + 首屏兜底延时」，Rust 侧窗口也保持隐藏到 app_ready。
-     默认关闭，FISH_BOOT_GUARD=1 构建打开。 */
-  var BOOT_GUARD_DEFAULT = false
-  var bootGuard = BOOT_GUARD_DEFAULT
-  document.documentElement.dataset.bootGuard = bootGuard ? '1' : '0'
-
-  // 主题先行：开关关闭时不在首帧设主题，等 app.js 启动后再设置
-  if (bootGuard) {
-    try {
-      var saved = localStorage.getItem('fish-app.theme')
-      var id = saved === 'a' || saved === 'b' || saved === 'c' || saved === 'd' ? saved : null
-      if (!id) id = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'a' : 'b'
-      document.documentElement.dataset.theme = id
-      if (id === 'a') document.documentElement.classList.add('wa-dark')
-    } catch (error) {}
-  }
+  // 主题在首帧之前设好：窗口底色与启动遮罩都依赖它，不能等 app.js
+  try {
+    var saved = localStorage.getItem('fish-app.theme')
+    var id = saved === 'a' || saved === 'b' || saved === 'c' || saved === 'd' ? saved : null
+    if (!id) id = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'a' : 'b'
+    document.documentElement.dataset.theme = id
+    if (id === 'a') document.documentElement.classList.add('wa-dark')
+  } catch (error) {}
 
   // 标记平台：macOS 用系统红绿灯，Windows 用自绘按钮
   try {

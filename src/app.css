@@ -302,11 +302,21 @@ html {
 }
 
 /* 组件升级完成前先别画：否则工具栏会按「未升级」的错误尺寸排版，再跳一下 */
-/* 内容隐藏只在防白屏机制打开时生效（data-boot-guard='1'），
-   关闭时界面立即可见，接受组件升级过程的排版闪动 */
-html[data-boot-guard='1']:not(.app-ready) .app {
-  visibility: hidden;
+/* 启动遮罩：盖住组件升级过程中的排版与未上色内容。
+   颜色跟随 --app-bg，透过来的底色与窗口 backgroundColor 保持一致。 */
+.boot-cover {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+  background: var(--app-bg, #0d0d10);
+  pointer-events: none;
+  transition: opacity 0.18s ease;
 }
+
+.boot-cover.is-hidden {
+  opacity: 0;
+}
+
 
 body {
   background: var(--app-bg);
