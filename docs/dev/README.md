@@ -7,7 +7,8 @@
 | 文档 | 内容 |
 |---|---|
 | [启动兜底延时（boot guard）](./boot-guard.md) | 防白屏延时的作用、构建期/运行时开关、关闭后的窗口显示链路、实测数据 |
-| [Android 支持方案](../android-plan.md) | 移植 Android 的范围、决策、分阶段实施清单 |
+| [窗口宽度调试角标（size badge）](./size-badge.md) | 左下角 `宽 × 高` 角标的启用条件、快捷键、样式与常见问题 |
+| [Android 支持方案](./android-plan.md) | 移植 Android 的范围、决策、分阶段实施清单 |
 
 ## 约定
 
@@ -20,7 +21,8 @@
 | 开关 | 作用域 | 默认 | 说明 |
 |---|---|---|---|
 | `FISH_DEBUG=1` | 构建期 | 关闭 | 打包宽度调试角标（release 包整段剔除） |
-| `__APP_VERSION__` | 构建期 | `package.json` 的 version | 标题栏版本号 |
 | `FISH_BOOT_GUARD=1` | 构建期 | 关闭 | 启动兜底延时（1.5s / 2s） |
+| `__APP_VERSION__` | 构建期 | `package.json` 的 version | 标题栏版本号 |
 | `fish-app.boot-guard` | 运行时（localStorage） | 跟随构建期默认值 | 覆盖上面的兜底开关，`'1'` 开 / `'0'` 关 |
+| `fish-app.debug-size` | 运行时（localStorage） | 无记录时显示 | 宽度角标显隐，`'1'` 显示 / `'0'` 隐藏 |
 | `Ctrl+Shift+D` | 运行时 | — | debug 构建里切换宽度角标显示 |
