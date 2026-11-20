@@ -13,16 +13,14 @@
   var bootGuard = BOOT_GUARD_DEFAULT
   document.documentElement.dataset.bootGuard = bootGuard ? '1' : '0'
 
-  // 主题先行：开关关闭时不在首帧设主题，等 app.js 启动后再设置
-  if (bootGuard) {
-    try {
-      var saved = localStorage.getItem('fish-app.theme')
-      var id = saved === 'a' || saved === 'b' || saved === 'c' || saved === 'd' ? saved : null
-      if (!id) id = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'a' : 'b'
-      document.documentElement.dataset.theme = id
-      if (id === 'a') document.documentElement.classList.add('wa-dark')
-    } catch (error) {}
-  }
+  // 实验：主题永远在首帧之前设好（遮罩颜色依赖 --app-bg）
+  try {
+    var saved = localStorage.getItem('fish-app.theme')
+    var id = saved === 'a' || saved === 'b' || saved === 'c' || saved === 'd' ? saved : null
+    if (!id) id = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'a' : 'b'
+    document.documentElement.dataset.theme = id
+    if (id === 'a') document.documentElement.classList.add('wa-dark')
+  } catch (error) {}
 
   // 标记平台：macOS 用系统红绿灯，Windows 用自绘按钮
   try {
