@@ -216,6 +216,7 @@ for (const id of [
   'balance-modal-x',
   'balance-modal-refresh',
   'balance-modal-ok',
+  'balance-modal-progress',
   'balance-amount',
   'settings-x',
   'settings',
@@ -775,6 +776,8 @@ function renderChrome() {  const loading = state.phase === 'loading'
   // 非 DeepSeek 地址没有余额接口
   if (!usesDeepSeekEndpoint()) setBalanceVisible(false)
   el['balance-progress'].hidden = !state.balanceBusy
+  el['balance-modal-progress'].hidden = !state.balanceBusy
+  el['balance-modal-refresh'].disabled = state.balanceBusy
   el['image-refresh'].hidden = !state.ocrDone
   el['image-refresh'].disabled = ocrBusy || loading
   el['image-refresh'].classList.toggle('is-spinning', ocrBusy)
