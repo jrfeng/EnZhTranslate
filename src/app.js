@@ -2985,6 +2985,30 @@ const MORE_ICONS = {
     '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="4.6" width="12" height="6.8" rx="1.4" /><circle cx="8" cy="8" r="1.6" /></svg>',
 }
 
+/// 「更多」菜单里复用工具栏按钮的图标（模型 / 主题 / 设置）
+const MORE_ICON_SOURCES = {
+  model: 'model-icon-btn',
+  theme: 'theme-icon-btn',
+  settings: 'settings-icon-btn',
+}
+
+/** 克隆工具栏按钮里的 svg，并按画布尺寸补偿线宽，保证 16px 下粗细一致 */
+function cloneToolbarIcon(buttonId) {
+  const button = el[buttonId]
+  if (button === null || button === undefined) return null
+  const source = button.querySelector('svg')
+  if (source === null) return null
+  const clone = source.cloneNode(true)
+  const box = String(clone.getAttribute('viewBox') || '0 0 16 16').split(/[\s,]+/)
+  const gridSize = Number(box[2]) || 16
+  clone.setAttribute('width', '16')
+  clone.setAttribute('height', '16')
+  // 目标渲染线宽 1.4px：16 网格 → 1.4，24 网格 → 2.1
+  clone.style.strokeWidth = String((1.4 * gridSize) / 16)
+  clone.removeAttribute('class')
+  return clone
+}
+
 function currentModelId() {
   return state.selectedModel || config.model || DEFAULT_MODEL
 }
@@ -3018,7 +3042,13 @@ function openMoreMenu() {
     row.setAttribute('role', 'menuitem')
     const ico = document.createElement('span')
     ico.className = 'ico'
-    ico.innerHTML = MORE_ICONS[item.key]
+    const sourceId = MORE_ICON_SOURCES[item.key]
+    const clonedIcon = sourceId === undefined ? null : cloneToolbarIcon(sourceId)
+    if (clonedIcon !== null) {
+      ico.appendChild(clonedIcon)
+    } else {
+      ico.innerHTML = MORE_ICONS[item.key]
+    }
     const label = document.createElement('span')
     label.textContent = item.label
     row.append(ico, label)
