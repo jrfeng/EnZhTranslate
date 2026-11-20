@@ -1553,6 +1553,16 @@ async function clipboardReadContent() {
   }
 }
 
+/** 纯文本粘贴前的规整：统一换行、去掉零宽字符与行尾空白 */
+function normalizePlainText(raw) {
+  return String(raw || '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[\u200b\u200c\u200d\ufeff]/g, '')
+    .split('\n')
+    .map((line) => line.replace(/[ \t]+$/, ''))
+    .join('\n')
+}
+
 /** 把 HTML 片段转成 Markdown；转不动就退回纯文本 */
 function htmlToMarkdownOrText(html, fallbackText) {
   if (typeof html === 'string' && html.trim().length > 0) {
@@ -1621,13 +1631,7 @@ function buildContextItems(region, event) {
       run: async () => {
         const raw = await clipboardReadText()
         if (raw.length === 0) return
-        // 统一换行、去掉零宽字符和行尾空白，避免把复制源的排版一起带进来
-        const plain = raw
-          .replace(/\r\n?/g, '\n')
-          .replace(/[\u200b\u200c\u200d\ufeff]/g, '')
-          .split('\n')
-          .map((line) => line.replace(/[ \t]+$/, ''))
-          .join('\n')
+        const plain = normalizePlainText(raw)
         if (plain.length > 0) insertInto(input, plain)
       },
     })
@@ -1847,18 +1851,53 @@ function initSizeBadge() {
   })
 }
 
+/** Ctrl/Cmd+Shift+V 的「粘贴为纯文本」：下一次 paste 不要转 Markdown */
+let plainPastePending = false
+let plainPasteTimer = 0
+
+function markPlainPasteIntent() {
+  plainPastePending = true
+  window.clearTimeout(plainPasteTimer)
+  // 按了快捷键却没粘贴时，2 秒后自动失效
+  plainPasteTimer = window.setTimeout(() => {
+    plainPastePending = false
+  }, 2000)
+}
+
 function bind() {
   // Ctrl+V：带格式的内容（网页、Word、Notion 等）先转成 Markdown 再插入；
   // 纯文本仍然走浏览器原生粘贴，不干预
   el.source.addEventListener('paste', (event) => {
     const data = event.clipboardData
     if (data === null || data === undefined) return
+
+    // 「粘贴为纯文本」：即使剪贴板里带着 HTML，也只取纯文本
+    if (plainPastePending) {
+      plainPastePending = false
+      window.clearTimeout(plainPasteTimer)
+      event.preventDefault()
+      const plain = normalizePlainText(data.getData('text/plain'))
+      if (plain.length > 0) insertInto(el.source, plain)
+      return
+    }
+
     const html = data.getData('text/html')
     if (typeof html !== 'string' || html.trim().length === 0) return
     event.preventDefault()
     const pasted = htmlToMarkdownOrText(html, data.getData('text/plain'))
     if (pasted.length > 0) insertInto(el.source, pasted)
   })
+
+  // 记录「纯文本粘贴」的快捷键意图，供上面的 paste 处理使用
+  document.addEventListener(
+    'keydown',
+    (event) => {
+      if (!(event.ctrlKey || event.metaKey) || !event.shiftKey) return
+      if (String(event.key).toLowerCase() !== 'v') return
+      markPlainPasteIntent()
+    },
+    true,
+  )
 
   // 右键：屏蔽浏览器菜单，改用自绘菜单（样式跟随主题）
   document.addEventListener('contextmenu', (event) => {
