@@ -29,17 +29,19 @@ await build({
   },
 })
 
-for (const file of ['index.html', 'app.css', 'boot-head.js']) {
+for (const file of ['index.html', 'app.css']) {
   await copyFile(join(src, file), join(out, file))
 }
 
-// boot-body.js 里的「首屏兜底延时」默认关闭：FISH_BOOT_GUARD=1 才打开
-const bootBody = await readFile(join(src, 'boot-body.js'), 'utf8')
+// 防白屏四件套的总开关（窗口不可见 / 主题先行 / 内容隐藏 / 首屏兜底延时）：
+// 默认关闭，FISH_BOOT_GUARD=1 才全部打开。boot-head.js 是唯一注入点。
 const bootGuardEnabled = process.env.FISH_BOOT_GUARD === '1'
+const bootHead = await readFile(join(src, 'boot-head.js'), 'utf8')
 await writeFile(
-  join(out, 'boot-body.js'),
-  bootBody.replace('var BOOT_GUARD_DEFAULT = false', `var BOOT_GUARD_DEFAULT = ${bootGuardEnabled}`),
+  join(out, 'boot-head.js'),
+  bootHead.replace('var BOOT_GUARD_DEFAULT = false', `var BOOT_GUARD_DEFAULT = ${bootGuardEnabled}`),
 )
+await copyFile(join(src, 'boot-body.js'), join(out, 'boot-body.js'))
 
 // 静态图片资源（空译文区的水印等）
 await cp(join(src, 'assets'), join(out, 'assets'), { recursive: true })

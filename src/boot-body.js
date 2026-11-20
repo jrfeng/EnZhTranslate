@@ -43,18 +43,8 @@
   }
 
   /* 首屏兜底延时：组件升级卡住时提前放出界面，避免一直黑屏/白屏。
-     默认关闭（会让人感觉启动慢 1.5~2 秒），需要时用下面任一开关打开：
-       1) 构建时：FISH_BOOT_GUARD=1 npm run build
-       2) 运行时：localStorage.setItem('fish-app.boot-guard', '1')（设 '0' 可强制关闭） */
-  var BOOT_GUARD_DEFAULT = false
-  var bootGuard = BOOT_GUARD_DEFAULT
-  try {
-    var savedGuard = localStorage.getItem('fish-app.boot-guard')
-    if (savedGuard === '1') bootGuard = true
-    else if (savedGuard === '0') bootGuard = false
-  } catch (error) {
-    /* 读不到就用默认值 */
-  }
+     跟随构建时的 FISH_BOOT_GUARD 总开关（boot-head.js 已把结果写到 data-boot-guard）。 */
+  var bootGuard = document.documentElement.dataset.bootGuard === '1'
 
   if (bootGuard) {
     setTimeout(function () {
