@@ -216,6 +216,7 @@ for (const id of [
   'balance-modal-x',
   'balance-modal-refresh',
   'balance-modal-ok',
+  'balance-modal-progress',
   'balance-amount',
   'settings-x',
   'settings',
@@ -775,6 +776,8 @@ function renderChrome() {  const loading = state.phase === 'loading'
   // 非 DeepSeek 地址没有余额接口
   if (!usesDeepSeekEndpoint()) setBalanceVisible(false)
   el['balance-progress'].hidden = !state.balanceBusy
+  el['balance-modal-progress'].classList.toggle('is-idle', !state.balanceBusy)
+  el['balance-modal-refresh'].disabled = state.balanceBusy
   el['image-refresh'].hidden = !state.ocrDone
   el['image-refresh'].disabled = ocrBusy || loading
   el['image-refresh'].classList.toggle('is-spinning', ocrBusy)
@@ -2985,6 +2988,30 @@ const MORE_ICONS = {
     '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="4.6" width="12" height="6.8" rx="1.4" /><circle cx="8" cy="8" r="1.6" /></svg>',
 }
 
+/// 「更多」菜单里复用工具栏按钮的图标（模型 / 主题 / 设置）
+const MORE_ICON_SOURCES = {
+  model: 'model-icon-btn',
+  theme: 'theme-icon-btn',
+  settings: 'settings-icon-btn',
+}
+
+/** 克隆工具栏按钮里的 svg，并按画布尺寸补偿线宽，保证 16px 下粗细一致 */
+function cloneToolbarIcon(buttonId) {
+  const button = el[buttonId]
+  if (button === null || button === undefined) return null
+  const source = button.querySelector('svg')
+  if (source === null) return null
+  const clone = source.cloneNode(true)
+  const box = String(clone.getAttribute('viewBox') || '0 0 16 16').split(/[\s,]+/)
+  const gridSize = Number(box[2]) || 16
+  clone.setAttribute('width', '16')
+  clone.setAttribute('height', '16')
+  // 目标渲染线宽 1.4px：16 网格 → 1.4，24 网格 → 2.1
+  clone.style.strokeWidth = String((1.4 * gridSize) / 16)
+  clone.removeAttribute('class')
+  return clone
+}
+
 function currentModelId() {
   return state.selectedModel || config.model || DEFAULT_MODEL
 }
@@ -3007,6 +3034,38 @@ function moreMenuItems() {
   ]
 }
 
+/// 窗口从 ≤640 被拉宽后，「更多」按钮会消失，菜单必须一起收起
+const compactMoreQuery = window.matchMedia('(max-width: 640px)')
+
+/** 拉宽到 >640 后，从「更多」打开的模型 / 主题 / 余额弹窗要一起收起。
+    设置除外：它任何宽度下都是独立弹窗，和工具栏布局无关。 */
+function closeCompactDialogs() {
+  if (!state.modelPickerOpen && !state.themePickerOpen && !state.balanceOpen) return
+  state.modelPickerOpen = false
+  state.themePickerOpen = false
+  state.balanceOpen = false
+  renderChrome()
+}
+
+function handleCompactExit() {
+  closeMoreMenu()
+  closeCompactDialogs()
+}
+
+let compactWidth = window.innerWidth <= 640
+
+/// 同步一次「是否处于窄布局」，从窄变宽时收起菜单和弹窗
+function syncCompactWidth() {
+  const compact = window.innerWidth <= 640
+  if (compact === compactWidth) return
+  compactWidth = compact
+  if (!compact) handleCompactExit()
+}
+
+compactMoreQuery.addEventListener('change', syncCompactWidth)
+// matchMedia 在部分环境（弹窗打开、虚拟时间等）不一定派发 change，resize 同步兜一道
+window.addEventListener('resize', syncCompactWidth)
+
 function openMoreMenu() {
   closeMoreMenu()
   state.moreMenuOpen = true
@@ -3018,7 +3077,13 @@ function openMoreMenu() {
     row.setAttribute('role', 'menuitem')
     const ico = document.createElement('span')
     ico.className = 'ico'
-    ico.innerHTML = MORE_ICONS[item.key]
+    const sourceId = MORE_ICON_SOURCES[item.key]
+    const clonedIcon = sourceId === undefined ? null : cloneToolbarIcon(sourceId)
+    if (clonedIcon !== null) {
+      ico.appendChild(clonedIcon)
+    } else {
+      ico.innerHTML = MORE_ICONS[item.key]
+    }
     const label = document.createElement('span')
     label.textContent = item.label
     row.append(ico, label)
