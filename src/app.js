@@ -3037,14 +3037,12 @@ function moreMenuItems() {
 /// 窗口从 ≤640 被拉宽后，「更多」按钮会消失，菜单必须一起收起
 const compactMoreQuery = window.matchMedia('(max-width: 640px)')
 
-/** 拉宽到 >640 后，从「更多」打开的四个弹窗也要一起收起 */
+/** 拉宽到 >640 后，从「更多」打开的模型 / 主题 / 余额弹窗要一起收起。
+    设置除外：它任何宽度下都是独立弹窗，和工具栏布局无关。 */
 function closeCompactDialogs() {
-  if (!state.modelPickerOpen && !state.themePickerOpen && !state.settingsOpen && !state.balanceOpen) {
-    return
-  }
+  if (!state.modelPickerOpen && !state.themePickerOpen && !state.balanceOpen) return
   state.modelPickerOpen = false
   state.themePickerOpen = false
-  state.settingsOpen = false
   state.balanceOpen = false
   renderChrome()
 }
