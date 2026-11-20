@@ -2836,6 +2836,9 @@ html[data-theme='d'] .card-icon-btn.on {
 
   #more-btn {
     display: inline-flex;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 auto;
   }
 
   /* 术语入口从独立一行挪到原文卡片工具栏 */
@@ -2995,12 +2998,6 @@ input,
   /* 余额只在菜单里出现，工具栏不占位 */
   #balance-wrap {
     display: none;
-  }
-
-  #more-btn {
-    width: 36px;
-    height: 36px;
-    flex: 0 0 auto;
   }
 
   /* 卡片：触控尺寸 + 字号 */
