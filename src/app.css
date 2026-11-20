@@ -937,11 +937,6 @@ html[data-theme='d'] .verify-btn {
   box-shadow: 2px 2px 0 #1b2a4a;
 }
 
-html[data-theme='c'] .verify-stage img {
-  border: 2px solid #101010;
-  border-radius: 6px;
-}
-
 /* 开关胶囊（粘贴后翻译 / 自动复制）——整颗可点，开启时填充强调色*/
 .toggle {
   display: inline-flex;
