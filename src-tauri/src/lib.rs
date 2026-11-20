@@ -446,7 +446,16 @@ async fn clipboard_write(request: ClipboardWriteRequest) -> Value {
 /// 前端把首屏渲染完之后调用：这时才把窗口显示出来，避免启动时闪白
 #[tauri::command]
 fn app_ready(window: tauri::WebviewWindow) -> Value {
-    // 显示前后各应用一次：WebView2 首帧时可能把窗口尺寸改回配置里的默认值
+    if startup_maximized() {
+        // 最大化启动：窗口在 setup 里已经最大化并显示，
+        // 这里只确认状态，绝不能 set_size —— 对最大化窗口 set_size 会先还原成普通窗口，肉眼可见地闪一下
+        if !window.is_maximized().unwrap_or(false) {
+            let _ = window.maximize();
+        }
+        let _ = window.set_focus();
+        return json!({ "ok": true });
+    }
+    // 普通启动：显示前后各应用一次，压掉 WebView2 首帧对尺寸的重算
     restore_window_size(&window);
     let _ = window.show();
     restore_window_size(&window);
@@ -561,10 +570,13 @@ struct WindowGeometry {
 struct SavedState {
     geometry: WindowGeometry,
     has_position: bool,
+    maximized: bool,
 }
 
 /// 最后一次"非最大化"的几何：最大化关闭时用它写盘
 static LAST_NORMAL: std::sync::Mutex<Option<WindowGeometry>> = std::sync::Mutex::new(None);
+/// 本次启动是否应该以最大化状态出现（上次是最大化关闭的）
+static STARTUP_MAXIMIZED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 impl SavedState {
     fn valid(&self) -> bool {
@@ -626,6 +638,7 @@ fn read_saved_state(window: &tauri::WebviewWindow) -> Option<SavedState> {
     let height = value.get("height").and_then(Value::as_i64).unwrap_or(0) as i32;
     let x = value.get("x").and_then(Value::as_i64).map(|v| v as i32);
     let y = value.get("y").and_then(Value::as_i64).map(|v| v as i32);
+    let maximized = value.get("maximized").and_then(Value::as_bool).unwrap_or(false);
     let (x, y, has_position) = match (x, y) {
         (Some(x), Some(y)) => (x, y, true),
         _ => (0, 0, false),
@@ -633,6 +646,7 @@ fn read_saved_state(window: &tauri::WebviewWindow) -> Option<SavedState> {
     let state = SavedState {
         geometry: WindowGeometry { x, y, width, height },
         has_position,
+        maximized,
     };
     state.valid().then_some(state)
 }
@@ -647,6 +661,7 @@ fn write_saved_state(window: &tauri::WebviewWindow, state: SavedState) {
         "version": 1,
         "width": geometry.width,
         "height": geometry.height,
+        "maximized": state.maximized,
     });
     if state.has_position {
         body["x"] = json!(geometry.x);
@@ -654,8 +669,8 @@ fn write_saved_state(window: &tauri::WebviewWindow, state: SavedState) {
     }
     let _ = std::fs::write(path, body.to_string());
     window_log(&format!(
-        "save {}x{} @ {},{}",
-        geometry.width, geometry.height, geometry.x, geometry.y
+        "save {}x{} @ {},{} maximized={}",
+        geometry.width, geometry.height, geometry.x, geometry.y, state.maximized
     ));
 }
 
@@ -692,7 +707,7 @@ fn save_window_size(window: &tauri::WebviewWindow, reason: &str) {
             None => return,
         }
     };
-    let state = SavedState { geometry, has_position: true };
+    let state = SavedState { geometry, has_position: true, maximized };
     if !state.valid() {
         window_log(&format!("skip save ({reason}): invalid geometry"));
         return;
@@ -773,10 +788,15 @@ fn restore_window_size(window: &tauri::WebviewWindow) {
     if let Ok(mut slot) = LAST_NORMAL.lock() {
         *slot = Some(geometry);
     }
+    STARTUP_MAXIMIZED.store(state.maximized, std::sync::atomic::Ordering::Relaxed);
     window_log(&format!(
-        "restore {}x{} @ {},{}",
-        geometry.width, geometry.height, geometry.x, geometry.y
+        "restore {}x{} @ {},{} maximized={}",
+        geometry.width, geometry.height, geometry.x, geometry.y, state.maximized
     ));
+}
+
+fn startup_maximized() -> bool {
+    STARTUP_MAXIMIZED.load(std::sync::atomic::Ordering::Relaxed)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -816,9 +836,13 @@ pub fn run() {    // GUI 版没有控制台，把 panic 文本落盘，方便事
                 // ② 再按上次主题给窗口上底色
                 let theme_id = startup_theme_id(&window);
                 apply_window_theme_color(&window, &theme_id);
-                // ③ 最后显示：底色和几何都已就位，页面还有遮罩盖着
-                // 注意：即使上次是最大化关闭，也恢复到「最大化前的尺寸」，
-                // 不自动最大化，避免启动瞬间的最大化动画/闪动
+                // ③ 上次是最大化关闭的：在窗口仍隐藏时直接最大化，
+                //    随后 show() 出来的第一帧就已经是最大化，不会看到动画
+                if startup_maximized() {
+                    let _ = window.maximize();
+                    window_log("startup: maximize before show");
+                }
+                // ④ 最后显示：底色和几何都已就位，页面还有遮罩盖着
                 let _ = window.show();
             }
             Ok(())

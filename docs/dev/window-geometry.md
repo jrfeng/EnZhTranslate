@@ -9,7 +9,7 @@
 | 场景 | 结果 |
 |---|---|
 | 调整尺寸 / 移动窗口后关闭 | 下次启动恢复到关闭前的尺寸和位置 |
-| 最大化状态下关闭 | 下次启动恢复到**最大化前的尺寸**（不自动最大化，避免启动瞬间的最大化动画） |
+| 最大化状态下关闭 | 下次启动**直接以最大化状态出现**（隐藏态先最大化再显示，看不到动画） |
 | 进程被强杀 | 恢复到强杀前的几何（拖动/缩放时每 700ms 落盘一次） |
 | 首次启动（无记录） | 使用 `tauri.conf.json` 的默认值：1180×780，居中 |
 | 配置损坏 / 数值越界 | 忽略，回落默认值 |
@@ -78,33 +78,63 @@ window.set_min_size(LogicalSize::new(360 + border, 480 + border));
 ## 配置文件格式
 
 ```json
-{ "version": 1, "x": 260, "y": 180, "width": 825, "height": 631 }
+{ "version": 1, "x": 260, "y": 180, "width": 825, "height": 631, "maximized": true }
 ```
 
 - 全部是**逻辑像素**（CSS px），跨 DPI 缩放保持一致
-- `version` 预留，未知字段忽略（旧文件里的 `maximized` 字段会被忽略）
+- `maximized` 表示上次是否最大化关闭；为 `true` 时启动直接最大化
+- `version` 预留，未知字段忽略
 - 校验规则：宽 360–7680、高 480–4320、坐标 ±32768，且必须与某块显示器相交 ≥120×80 才应用位置
 
 ## 最大化是怎么处理的
 
-关键点：**不要把屏幕尺寸当成用户想要的尺寸存进去**，也**不在启动时自动最大化**。
+要同时满足两个目标：
+
+1. 最大化关闭 → 下次启动**直接最大化**
+2. 启动过程**不能闪**（不能先出现普通窗口再最大化）
+
+关键实现：**在窗口仍隐藏时执行 `maximize()`，然后才 `show()`**。
 
 ```rust
-// 每次非最大化状态下的移动/缩放，都更新内存里的 LAST_NORMAL
-if !maximized { update_last_normal(window); }
-
-// 写盘时：
-// - 普通状态 → 当前几何
-// - 最大化   → LAST_NORMAL（不存在则读旧文件里的几何）
-let geometry = if maximized { last_normal().or(saved) } else { current() };
+// setup：窗口此时还是 visible=false
+restore_window_size(&window);              // 先用普通几何占位，作为"还原后"的尺寸
+apply_min_inner_size(&window, 360.0, 480.0);
+apply_window_theme_color(&window, &theme_id);
+if startup_maximized() {
+    let _ = window.maximize();             // 隐藏态直接最大化
+}
+let _ = window.show();                     // 显示出来的第一帧就是最大化
 ```
 
-所以「最大化 → 关闭 → 重开」的结果是：
+`app_ready` 里还要**跳过尺寸恢复**：
 
-1. 启动时以 `820×600` 的普通窗口打开（最大化前的尺寸）
-2. 不会出现「普通尺寸 → 突然最大化」的闪动，启动过程始终平顺
+```rust
+if startup_maximized() {
+    // 绝不能调用 set_size —— 对最大化窗口 set_size 会先还原成普通窗口再最大化，肉眼可见地闪一下
+    if !window.is_maximized().unwrap_or(false) { let _ = window.maximize(); }
+    let _ = window.set_focus();
+    return json!({ "ok": true });
+}
+```
 
-早期版本曾实现为「启动即最大化」，但 Windows 上会先绘制一帧普通窗口再执行最大化，观感是闪一下，因此改回「恢复最大化前的尺寸」。
+这正是之前"会闪一下"的根因：`app_ready` 里无条件 `restore_window_size()`（内部是 `set_size`），把已经最大化的窗口打回普通尺寸，再重新最大化。
+
+尺寸保存侧仍然遵循「最大化时不写屏幕尺寸」：
+
+```rust
+if !maximized { update_last_normal(window); }
+let geometry = if maximized {
+    last_normal().filter(|g| !is_screen_sized(window, g))
+        .or_else(|| read_saved_state(window).map(|s| s.geometry))
+        .unwrap_or_else(|| current_geometry(window).unwrap())
+} else {
+    current_geometry(window).unwrap()
+};
+```
+
+所以配置里始终保留着「最大化之前的尺寸」，用户点还原时会回到那个尺寸，而不是满屏。
+
+实测：最大化关闭后重开，从窗口可见的第一帧（259ms）起就是 1721×927 最大化，之后 400ms 内尺寸没有任何变化。
 
 ## 诊断日志
 
@@ -145,5 +175,6 @@ let geometry = if maximized { last_normal().or(saved) } else { current() };
 
 1. `restore_window_size` 必须在 `window.show()` 之前调用（`setup` 与 `app_ready` 两处都是）
 2. 保存逻辑里的「最大化用 LAST_NORMAL」不要退化回「最大化直接跳过」——否则最大化关闭会丢失尺寸
+3. 最大化启动时，`app_ready` 里**不要调用 `restore_window_size`**（内部 `set_size` 会把最大化打回普通），否则会出现"先普通后最大化"的闪动
 3. 新增字段时保留 `version`，旧文件缺少字段要有默认值
 4. `WINDOW_DEBUG` 依赖构建时的 `FISH_DEBUG=1`，release 构建里不会写日志
