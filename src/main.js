@@ -21,7 +21,24 @@ await Promise.all(TAGS.map((tag) => customElements.whenDefined(tag)))
 await new Promise((resolve) => requestAnimationFrame(() => resolve()))
 document.documentElement.classList.add('app-ready')
 
-await import('./app.js')
+// 实验：启动遮罩在 app.js 首屏渲染完成后再淡出（双 rAF 保证这一帧已进合成层）
+function dropBootCover() {
+  const cover = document.getElementById('boot-cover')
+  if (cover === null) return
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      cover.classList.add('is-hidden')
+      window.setTimeout(() => cover.remove(), 220)
+    })
+  })
+}
+
+try {
+  await import('./app.js')
+} finally {
+  // app.js 抛错也要撤掉遮罩，否则用户永远看不到界面
+  dropBootCover()
+}
 
 // 首屏渲染完成后再让 Rust 把窗口显示出来：窗口一直不可见，就不会先闪一下白底
 try {

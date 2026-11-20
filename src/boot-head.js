@@ -6,6 +6,7 @@
  * 单独成文件（而不是内联）是为了能开严格的 CSP：script-src 'self'。
  */
 ;(function () {
+  // 主题在首帧之前设好：窗口底色与启动遮罩都依赖它，不能等 app.js
   try {
     var saved = localStorage.getItem('fish-app.theme')
     var id = saved === 'a' || saved === 'b' || saved === 'c' || saved === 'd' ? saved : null

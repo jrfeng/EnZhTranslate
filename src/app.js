@@ -779,6 +779,11 @@ function renderChrome() {  const loading = state.phase === 'loading'
   el['image-refresh'].disabled = ocrBusy || loading
   el['image-refresh'].classList.toggle('is-spinning', ocrBusy)
 
+  // 识别还没结束（或失败/重试中）时不开放「校验」：图都还没认完，进去也没内容可改
+  const verifyDisabled = ocrBusy || state.image === null
+  el['image-zoom'].disabled = verifyDisabled
+  el['image-zoom-icon'].disabled = verifyDisabled
+
   el['image-preview'].hidden = state.image === null
   if (state.image !== null) {
     el['image-name'].textContent = state.image.name
@@ -1553,6 +1558,16 @@ async function clipboardReadContent() {
   }
 }
 
+/** 纯文本粘贴前的规整：统一换行、去掉零宽字符与行尾空白 */
+function normalizePlainText(raw) {
+  return String(raw || '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[\u200b\u200c\u200d\ufeff]/g, '')
+    .split('\n')
+    .map((line) => line.replace(/[ \t]+$/, ''))
+    .join('\n')
+}
+
 /** 把 HTML 片段转成 Markdown；转不动就退回纯文本 */
 function htmlToMarkdownOrText(html, fallbackText) {
   if (typeof html === 'string' && html.trim().length > 0) {
@@ -1621,13 +1636,7 @@ function buildContextItems(region, event) {
       run: async () => {
         const raw = await clipboardReadText()
         if (raw.length === 0) return
-        // 统一换行、去掉零宽字符和行尾空白，避免把复制源的排版一起带进来
-        const plain = raw
-          .replace(/\r\n?/g, '\n')
-          .replace(/[\u200b\u200c\u200d\ufeff]/g, '')
-          .split('\n')
-          .map((line) => line.replace(/[ \t]+$/, ''))
-          .join('\n')
+        const plain = normalizePlainText(raw)
         if (plain.length > 0) insertInto(input, plain)
       },
     })
@@ -1656,7 +1665,7 @@ function buildContextItems(region, event) {
     })
     items.push({
       label: '校验',
-      disabled: !hasImage,
+      disabled: !hasImage || state.ocrBusy,
       run: () => void openVerify(),
     })
     items.push({
@@ -1731,9 +1740,13 @@ function buildContextItems(region, event) {
   return []
 }
 
+let ctxIdleTimer = 0
+
 function hideContextMenu() {
   if (el['ctx-menu'] === null || el['ctx-menu'] === undefined) return
   el['ctx-menu'].hidden = true
+  el['ctx-menu'].classList.remove('ctx-idle')
+  window.clearTimeout(ctxIdleTimer)
 }
 
 function isContextMenuOpen() {
@@ -1776,8 +1789,26 @@ function showContextMenu(items, x, y) {
   menu.style.top = top + 'px'
 
   // preventScroll：聚焦菜单项时不要让页面滚动，否则会触发 scroll 监听把菜单关掉
-  const first = menu.querySelector('.ctx-item:not(:disabled)')
-  if (first !== null) first.focus({ preventScroll: true })
+  menu.tabIndex = -1
+
+  // 刚弹出来时先不响应 hover / focus-visible：
+  // 鼠标本来就在右键位置，菜单可能正好展开在指针下面；
+  // 焦点落在第一项上时浏览器还会按上一次输入方式判断 focus-visible，
+  // 表现为「没动鼠标却有一项高亮」。
+  menu.classList.add('ctx-idle')
+  window.clearTimeout(ctxIdleTimer)
+  ctxIdleTimer = window.setTimeout(() => menu.classList.remove('ctx-idle'), 600)
+
+  const releaseIdle = (event) => {
+    if (Math.abs(event.clientX - x) < 2 && Math.abs(event.clientY - y) < 2) return
+    menu.classList.remove('ctx-idle')
+    window.clearTimeout(ctxIdleTimer)
+    document.removeEventListener('pointermove', releaseIdle, true)
+  }
+  document.addEventListener('pointermove', releaseIdle, true)
+
+  // preventScroll：聚焦菜单容器时不要让页面滚动，否则会触发 scroll 事件把菜单关掉
+  menu.focus({ preventScroll: true })
 }
 
 function handleContextMenuKeydown(event) {
@@ -1847,18 +1878,53 @@ function initSizeBadge() {
   })
 }
 
+/** Ctrl/Cmd+Shift+V 的「粘贴为纯文本」：下一次 paste 不要转 Markdown */
+let plainPastePending = false
+let plainPasteTimer = 0
+
+function markPlainPasteIntent() {
+  plainPastePending = true
+  window.clearTimeout(plainPasteTimer)
+  // 按了快捷键却没粘贴时，2 秒后自动失效
+  plainPasteTimer = window.setTimeout(() => {
+    plainPastePending = false
+  }, 2000)
+}
+
 function bind() {
   // Ctrl+V：带格式的内容（网页、Word、Notion 等）先转成 Markdown 再插入；
   // 纯文本仍然走浏览器原生粘贴，不干预
   el.source.addEventListener('paste', (event) => {
     const data = event.clipboardData
     if (data === null || data === undefined) return
+
+    // 「粘贴为纯文本」：即使剪贴板里带着 HTML，也只取纯文本
+    if (plainPastePending) {
+      plainPastePending = false
+      window.clearTimeout(plainPasteTimer)
+      event.preventDefault()
+      const plain = normalizePlainText(data.getData('text/plain'))
+      if (plain.length > 0) insertInto(el.source, plain)
+      return
+    }
+
     const html = data.getData('text/html')
     if (typeof html !== 'string' || html.trim().length === 0) return
     event.preventDefault()
     const pasted = htmlToMarkdownOrText(html, data.getData('text/plain'))
     if (pasted.length > 0) insertInto(el.source, pasted)
   })
+
+  // 记录「纯文本粘贴」的快捷键意图，供上面的 paste 处理使用
+  document.addEventListener(
+    'keydown',
+    (event) => {
+      if (!(event.ctrlKey || event.metaKey) || !event.shiftKey) return
+      if (String(event.key).toLowerCase() !== 'v') return
+      markPlainPasteIntent()
+    },
+    true,
+  )
 
   // 右键：屏蔽浏览器菜单，改用自绘菜单（样式跟随主题）
   document.addEventListener('contextmenu', (event) => {
@@ -2575,6 +2641,8 @@ function renderVerifyView() {
 
 /** 打开校验弹窗：整页大小的浮层，上面看图片、下面改文字 */
 function openVerify() {
+  // 识别中直接忽略，避免打开一个空弹窗
+  if (state.ocrBusy) return
   resetVerifyStage()
   if (state.image === null) return
   el['verify-image'].src = state.image.dataUrl
@@ -2867,6 +2935,8 @@ function applyTheme(theme) {
   const id = resolveTheme(chosen)
   document.documentElement.dataset.theme = id
   document.documentElement.classList.toggle('wa-dark', id === 'a')
+  // 把解析后的主题交给 Rust：下次启动窗口的底色直接用它，避免深浅色闪烁
+  void invokeTauri('save_theme', { theme: id })
 }
 
 // 选「跟随系统」时，系统深浅色一变就跟着变

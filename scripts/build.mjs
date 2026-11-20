@@ -1,5 +1,5 @@
 import { build } from 'esbuild'
-import { cp, copyFile, mkdir, readFile, rm } from 'node:fs/promises'
+import { cp, copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -28,6 +28,10 @@ await build({
     __APP_VERSION__: JSON.stringify(appVersion),
   },
 })
+
+for (const file of ['index.html', 'app.css']) {
+  await copyFile(join(src, file), join(out, file))
+}
 
 for (const file of ['index.html', 'app.css', 'boot-head.js', 'boot-body.js']) {
   await copyFile(join(src, file), join(out, file))
